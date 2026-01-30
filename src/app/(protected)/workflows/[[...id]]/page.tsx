@@ -5,14 +5,18 @@ import { useParams } from 'next/navigation';
 import { WorkflowCanvas } from '@/components/workflow';
 import IconSidebar from '@/components/workflow/Sidebar/IconSidebar';
 import NodeSidebar from '@/components/workflow/Sidebar/NodeSidebar';
+import { HistorySidebar } from '@/components/workflow/HistorySidebar';
+import PropertiesSidebar from '@/components/workflow/Sidebar/PropertiesSidebar';
 import { useWorkflowStore } from '@/stores/workflow-store';
-import { Sparkles, Share2, ChevronDown } from 'lucide-react';
+import { Sparkles, Share2, ChevronDown, History, MoreHorizontal, Download, Upload } from 'lucide-react';
 
 export default function WorkflowEditorPage() {
     const params = useParams();
-    const workflowId = params?.id as string | undefined;
+    const workflowId = (params?.id as string[] | undefined)?.[0];
     const [isLoaded, setIsLoaded] = useState(false);
     const [activeSection, setActiveSection] = useState<string | null>(null);
+    const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+    const [showMenu, setShowMenu] = useState(false);
 
     const nodes = useWorkflowStore((state) => state.nodes);
     const edges = useWorkflowStore((state) => state.edges);
@@ -84,7 +88,7 @@ export default function WorkflowEditorPage() {
             method,
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                name: useWorkflowStore.getState().workflowName, // Use latest from store
+                name: useWorkflowStore.getState().workflowName,
                 nodes,
                 edges,
             }),
@@ -100,7 +104,7 @@ export default function WorkflowEditorPage() {
         if (!workflowId || workflowId === 'new') {
             window.history.replaceState({}, '', `/workflows/${data.id}`);
         }
-    }, [workflowId, nodes, edges]); // Removed workflowName dependency to usegetState
+    }, [workflowId, nodes, edges]);
 
     // Handle workflow run
     const handleRun = useCallback(async (scope: 'full' | 'selected' | 'single') => {
@@ -160,6 +164,61 @@ export default function WorkflowEditorPage() {
         }
     }, [workflowId, nodes, edges, setNodeStatus, updateNodeData]);
 
+    // Handle export
+    const handleExport = useCallback(() => {
+        const workflow = {
+            name: workflowName,
+            nodes,
+            edges,
+            version: '1.0',
+            createdAt: new Date().toISOString(),
+        };
+
+        const blob = new Blob([JSON.stringify(workflow, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${workflowName.replace(/\s+/g, '-').toLowerCase()}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        setShowMenu(false);
+    }, [workflowName, nodes, edges]);
+
+    // Handle import
+    const handleImport = useCallback(() => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json';
+        input.onchange = async (e) => {
+            const file = (e.target as HTMLInputElement).files?.[0];
+            if (!file) return;
+
+            try {
+                const text = await file.text();
+                const workflow = JSON.parse(text);
+
+                if (!workflow.nodes || !workflow.edges) {
+                    alert('Invalid workflow file');
+                    return;
+                }
+
+                setWorkflow(
+                    workflowId || 'temp',
+                    workflow.name || 'Imported Workflow',
+                    workflow.nodes,
+                    workflow.edges
+                );
+
+                await handleSave();
+            } catch (error) {
+                console.error('Import failed:', error);
+                alert('Failed to import workflow');
+            }
+        };
+        input.click();
+        setShowMenu(false);
+    }, [workflowId, setWorkflow, handleSave]);
+
     if (!isLoaded) {
         return (
             <div className="h-screen flex items-center justify-center bg-[#0E0E10]">
@@ -208,11 +267,52 @@ export default function WorkflowEditorPage() {
                         <span className="text-xs font-medium text-gray-300">150 credits</span>
                     </div>
 
+                    {/* History Button */}
+                    <button
+                        onClick={() => setIsHistoryOpen(!isHistoryOpen)}
+                        className={`flex items-center gap-1.5 px-3 py-2 rounded-lg transition-colors ${isHistoryOpen
+                            ? 'bg-purple-500/20 text-purple-400'
+                            : 'bg-[#1C1C1E] text-gray-400 hover:text-white border border-[#2C2C2E]'
+                            }`}
+                    >
+                        <History className="w-3.5 h-3.5" />
+                        <span className="text-xs font-medium">History</span>
+                    </button>
+
                     {/* Share Button */}
                     <button className="flex items-center gap-1.5 px-3 py-2 bg-[#E1E476] hover:bg-[#d4d765] text-black rounded-lg transition-colors">
                         <Share2 className="w-3.5 h-3.5" />
                         <span className="text-xs font-semibold">Share</span>
                     </button>
+
+                    {/* More Menu */}
+                    <div className="relative">
+                        <button
+                            onClick={() => setShowMenu(!showMenu)}
+                            className="p-2 bg-[#1C1C1E] hover:bg-[#2C2C2E] rounded-lg transition-colors border border-[#2C2C2E]"
+                        >
+                            <MoreHorizontal className="w-4 h-4 text-gray-400" />
+                        </button>
+
+                        {showMenu && (
+                            <div className="absolute top-full right-0 mt-2 bg-[#1C1C1E] border border-[#2C2C2E] rounded-lg shadow-xl overflow-hidden min-w-[160px] z-50">
+                                <button
+                                    onClick={handleExport}
+                                    className="w-full px-4 py-2.5 text-left text-white hover:bg-[#2C2C2E] transition-colors text-xs flex items-center gap-2"
+                                >
+                                    <Download className="w-3.5 h-3.5" />
+                                    Export JSON
+                                </button>
+                                <button
+                                    onClick={handleImport}
+                                    className="w-full px-4 py-2.5 text-left text-white hover:bg-[#2C2C2E] transition-colors text-xs flex items-center gap-2"
+                                >
+                                    <Upload className="w-3.5 h-3.5" />
+                                    Import JSON
+                                </button>
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 {/* Tasks Dropdown - Below Share */}
@@ -226,6 +326,16 @@ export default function WorkflowEditorPage() {
                 {/* Canvas */}
                 <WorkflowCanvas />
             </div>
+
+            {/* Properties Sidebar (Right) */}
+            <PropertiesSidebar />
+
+            {/* History Sidebar */}
+            <HistorySidebar
+                workflowId={workflowId}
+                isOpen={isHistoryOpen}
+                onClose={() => setIsHistoryOpen(false)}
+            />
         </div>
     );
 }

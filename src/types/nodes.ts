@@ -46,6 +46,8 @@ export interface LLMNodeData extends BaseNodeData {
   userMessage?: string;
   images?: string[];
   response?: string;
+  temperature?: number;
+  thinking?: boolean;
 }
 
 // Crop Image Node

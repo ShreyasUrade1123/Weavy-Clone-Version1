@@ -1,8 +1,12 @@
 import { task } from "@trigger.dev/sdk/v3";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import sharp from "sharp";
 
-// LLM Task
+// Base URL for API calls - adjust for your deployment
+const API_BASE_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+
+// ============================================
+// LLM Task - Gemini API Integration
+// ============================================
 interface LLMTaskPayload {
     model: string;
     systemPrompt: string;
@@ -32,7 +36,7 @@ export const llmTask = task({
         const parts: Array<{ text: string } | { inlineData: { mimeType: string; data: string } }> = [];
 
         if (systemPrompt) {
-            parts.push({ text: `System: ${systemPrompt}\\n\\n` });
+            parts.push({ text: `System: ${systemPrompt}\n\n` });
         }
 
         parts.push({ text: userMessage });
@@ -69,71 +73,76 @@ export const llmTask = task({
     },
 });
 
-// Crop Image Task
+// ============================================
+// Crop Image Task - Transloadit Integration
+// ============================================
 interface CropImagePayload {
     imageUrl: string;
-    xPercent: number;
-    yPercent: number;
-    widthPercent: number;
-    heightPercent: number;
+    x: number;      // x coordinate in pixels
+    y: number;      // y coordinate in pixels
+    width: number;  // width in pixels
+    height: number; // height in pixels
     nodeId: string;
     runId: string;
 }
 
 export const cropImageTask = task({
     id: "crop-image",
-    maxDuration: 60,
+    maxDuration: 120,
     retry: {
         maxAttempts: 2,
     },
     run: async (payload: CropImagePayload) => {
-        const { imageUrl, xPercent, yPercent, widthPercent, heightPercent, nodeId, runId } = payload;
+        const { imageUrl, x, y, width, height, nodeId, runId } = payload;
 
-        const response = await fetch(imageUrl);
+        if (!imageUrl) {
+            throw new Error("Image URL is required");
+        }
+
+        // Call our processing API which uses Transloadit
+        const response = await fetch(`${API_BASE_URL}/api/process`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                type: "crop",
+                fileUrl: imageUrl,
+                x: x || 0,
+                y: y || 0,
+                width: width || 100,
+                height: height || 100,
+            }),
+        });
+
         if (!response.ok) {
-            throw new Error(`Failed to fetch image: ${response.statusText}`);
+            const error = await response.json();
+            throw new Error(`Crop failed: ${error.error || response.statusText}`);
         }
 
-        const imageBuffer = Buffer.from(await response.arrayBuffer());
-
-        const metadata = await sharp(imageBuffer).metadata();
-        if (!metadata.width || !metadata.height) {
-            throw new Error("Could not determine image dimensions");
-        }
-
-        const left = Math.round((xPercent / 100) * metadata.width);
-        const top = Math.round((yPercent / 100) * metadata.height);
-        const width = Math.round((widthPercent / 100) * metadata.width);
-        const height = Math.round((heightPercent / 100) * metadata.height);
-
-        const croppedBuffer = await sharp(imageBuffer)
-            .extract({ left, top, width, height })
-            .toBuffer();
-
-        const base64 = croppedBuffer.toString("base64");
-        const croppedUrl = `data:image/png;base64,${base64}`;
+        const result = await response.json();
 
         return {
             nodeId,
             runId,
-            croppedUrl,
-            originalDimensions: { width: metadata.width, height: metadata.height },
-            cropDimensions: { left, top, width, height },
+            croppedUrl: result.resultUrl,
+            cropDimensions: { x, y, width, height },
+            assemblyId: result.assemblyId,
         };
     },
 });
 
-// Extract Frame Task
+// ============================================
+// Extract Frame Task - Transloadit Integration
+// ============================================
 interface ExtractFramePayload {
     videoUrl: string;
-    timestamp: string;
+    timestamp: number; // timestamp in seconds
     nodeId: string;
     runId: string;
 }
 
 export const extractFrameTask = task({
     id: "extract-frame",
-    maxDuration: 120,
+    maxDuration: 180,
     retry: {
         maxAttempts: 2,
     },
@@ -144,25 +153,30 @@ export const extractFrameTask = task({
             throw new Error("Video URL is required");
         }
 
-        let timestampSeconds = 0;
-        if (timestamp.includes(":")) {
-            const parts = timestamp.split(":").map(Number);
-            if (parts.length === 3) {
-                timestampSeconds = parts[0] * 3600 + parts[1] * 60 + parts[2];
-            } else if (parts.length === 2) {
-                timestampSeconds = parts[0] * 60 + parts[1];
-            }
-        } else {
-            timestampSeconds = parseFloat(timestamp) || 0;
+        // Call our processing API which uses Transloadit
+        const response = await fetch(`${API_BASE_URL}/api/process`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                type: "frame",
+                fileUrl: videoUrl,
+                timestamp: timestamp || 0,
+            }),
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(`Frame extraction failed: ${error.error || response.statusText}`);
         }
+
+        const result = await response.json();
 
         return {
             nodeId,
             runId,
-            frameUrl: videoUrl,
-            timestamp: timestampSeconds,
-            status: "frame_extraction_placeholder",
-            message: "Frame extraction requires ffmpeg integration. Video URL preserved.",
+            frameUrl: result.resultUrl,
+            timestamp,
+            assemblyId: result.assemblyId,
         };
     },
 });

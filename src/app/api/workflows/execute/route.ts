@@ -4,6 +4,7 @@ import { z } from 'zod';
 import prisma from '@/lib/db';
 import { topologicalSort, getConnectedInputs } from '@/lib/workflow-engine/validation';
 import { Node, Edge } from '@xyflow/react';
+import { tasks } from '@trigger.dev/sdk/v3';
 
 const executeWorkflowSchema = z.object({
     workflowId: z.string(),
@@ -67,7 +68,8 @@ export async function POST(request: NextRequest) {
         }> = [];
 
         // Get execution layers
-        const executionLayers = topologicalSort(nodesToExecute, edges);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const executionLayers = topologicalSort(nodesToExecute as any, edges);
 
         // Store outputs for reference
         const nodeOutputs = new Map<string, unknown>();
@@ -139,15 +141,15 @@ export async function POST(request: NextRequest) {
                             break;
 
                         case 'llm':
-                            output = await executeLLM(node, inputs);
+                            output = await executeLLMViaTrigger(node, inputs, run.id);
                             break;
 
                         case 'cropImage':
-                            output = await executeCropImage(node, inputs);
+                            output = await executeCropImageViaTrigger(node, inputs, run.id);
                             break;
 
                         case 'extractFrame':
-                            output = await executeExtractFrame(node, inputs);
+                            output = await executeExtractFrameViaTrigger(node, inputs, run.id);
                             break;
 
                         default:
@@ -234,6 +236,138 @@ export async function POST(request: NextRequest) {
     }
 }
 
+// ============================================
+// TRIGGER.DEV WRAPPER FUNCTIONS
+// These use tasks.triggerAndPoll to run via Trigger.dev
+// ============================================
+
+async function executeLLMViaTrigger(
+    node: Node,
+    inputs: Record<string, unknown>,
+    runId: string
+): Promise<string> {
+    const userMessage = (inputs['user_message'] as string) || (node.data as { userMessage?: string })?.userMessage;
+    if (!userMessage) {
+        throw new Error('User message is required');
+    }
+
+    const payload = {
+        model: (node.data as { model?: string })?.model || 'gemini-2.0-flash-exp',
+        systemPrompt: (inputs['system_prompt'] as string) || (node.data as { systemPrompt?: string })?.systemPrompt || '',
+        userMessage,
+        images: (inputs['images'] as string[]) || [],
+        nodeId: node.id,
+        runId,
+    };
+
+    try {
+        const result = await tasks.triggerAndPoll('llm-execution', payload, {
+            pollIntervalMs: 1000,
+        });
+
+        if (result.status === 'COMPLETED') {
+            return result.output?.response;
+        } else {
+            throw new Error(`LLM task failed with status: ${result.status}`);
+        }
+    } catch (error) {
+        // Fallback to direct execution if Trigger.dev is unavailable
+        console.warn('Trigger.dev unavailable, falling back to direct execution:', error);
+        return executeLLM(node, inputs);
+    }
+}
+
+async function executeCropImageViaTrigger(
+    node: Node,
+    inputs: Record<string, unknown>,
+    runId: string
+): Promise<string> {
+    const imageUrl = inputs['image_url'] as string;
+    if (!imageUrl) {
+        throw new Error('Image URL is required');
+    }
+
+    const payload = {
+        imageUrl,
+        x: Number(inputs['x_percent'] ?? (node.data as { xPercent?: number })?.xPercent ?? 0),
+        y: Number(inputs['y_percent'] ?? (node.data as { yPercent?: number })?.yPercent ?? 0),
+        width: Number(inputs['width_percent'] ?? (node.data as { widthPercent?: number })?.widthPercent ?? 100),
+        height: Number(inputs['height_percent'] ?? (node.data as { heightPercent?: number })?.heightPercent ?? 100),
+        nodeId: node.id,
+        runId,
+    };
+
+    try {
+        const result = await tasks.triggerAndPoll('crop-image', payload, {
+            pollIntervalMs: 1000,
+        });
+
+        if (result.status === 'COMPLETED') {
+            return result.output?.croppedUrl;
+        } else {
+            throw new Error(`Crop image task failed with status: ${result.status}`);
+        }
+    } catch (error) {
+        // Fallback to direct execution if Trigger.dev is unavailable
+        console.warn('Trigger.dev unavailable, falling back to direct execution:', error);
+        return executeCropImage(node, inputs);
+    }
+}
+
+async function executeExtractFrameViaTrigger(
+    node: Node,
+    inputs: Record<string, unknown>,
+    runId: string
+): Promise<string> {
+    const videoUrl = inputs['video_url'] as string;
+    if (!videoUrl) {
+        throw new Error('Video URL is required');
+    }
+
+    // Parse timestamp
+    const timestampStr = (inputs['timestamp'] ?? (node.data as { timestamp?: string })?.timestamp ?? '0') as string;
+    let timestampSeconds = 0;
+
+    if (timestampStr.includes(':')) {
+        const parts = timestampStr.split(':').map(Number);
+        if (parts.length === 3) {
+            timestampSeconds = parts[0] * 3600 + parts[1] * 60 + parts[2];
+        } else if (parts.length === 2) {
+            timestampSeconds = parts[0] * 60 + parts[1];
+        }
+    } else {
+        timestampSeconds = parseFloat(timestampStr) || 0;
+    }
+
+    const payload = {
+        videoUrl,
+        timestamp: timestampSeconds,
+        nodeId: node.id,
+        runId,
+    };
+
+    try {
+        const result = await tasks.triggerAndPoll('extract-frame', payload, {
+            pollIntervalMs: 1000,
+        });
+
+        if (result.status === 'COMPLETED') {
+            return result.output?.frameUrl;
+        } else {
+            throw new Error(`Extract frame task failed with status: ${result.status}`);
+        }
+    } catch (error) {
+        // Fallback to direct execution if Trigger.dev is unavailable
+        console.warn('Trigger.dev unavailable, falling back to direct execution:', error);
+        return executeExtractFrame(node, inputs);
+    }
+}
+
+// ============================================
+// FALLBACK DIRECT EXECUTION FUNCTIONS
+// Used when Trigger.dev is unavailable
+// ============================================
+
 // LLM execution (direct call for now, can be moved to Trigger.dev)
 async function executeLLM(node: Node, inputs: Record<string, unknown>): Promise<string> {
     const { GoogleGenerativeAI } = await import('@google/generative-ai');
@@ -285,39 +419,89 @@ async function executeLLM(node: Node, inputs: Record<string, unknown>): Promise<
     return text;
 }
 
-// Crop image execution (placeholder - would use FFmpeg via Trigger.dev)
+// Crop image execution using Transloadit
 async function executeCropImage(node: Node, inputs: Record<string, unknown>): Promise<string> {
     const imageUrl = inputs['image_url'] as string;
     if (!imageUrl) {
         throw new Error('Image URL is required');
     }
 
-    // For now, return the original image
-    // In production, this would call Trigger.dev with FFmpeg
-    console.log('Crop image called with:', {
-        imageUrl,
-        xPercent: inputs['x_percent'] ?? (node.data as { xPercent?: number })?.xPercent ?? 0,
-        yPercent: inputs['y_percent'] ?? (node.data as { yPercent?: number })?.yPercent ?? 0,
-        widthPercent: inputs['width_percent'] ?? (node.data as { widthPercent?: number })?.widthPercent ?? 100,
-        heightPercent: inputs['height_percent'] ?? (node.data as { heightPercent?: number })?.heightPercent ?? 100,
+    // Get crop parameters
+    const xPercent = inputs['x_percent'] ?? (node.data as { xPercent?: number })?.xPercent ?? 0;
+    const yPercent = inputs['y_percent'] ?? (node.data as { yPercent?: number })?.yPercent ?? 0;
+    const widthPercent = inputs['width_percent'] ?? (node.data as { widthPercent?: number })?.widthPercent ?? 100;
+    const heightPercent = inputs['height_percent'] ?? (node.data as { heightPercent?: number })?.heightPercent ?? 100;
+
+    // First, get image dimensions to calculate pixel values
+    // For now, use percentages as absolute pixels (Transloadit will handle the conversion)
+    // This is a simplification - in production you'd fetch the image metadata first
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+
+    const response = await fetch(`${baseUrl}/api/process`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            type: 'crop',
+            fileUrl: imageUrl,
+            x: Number(xPercent),
+            y: Number(yPercent),
+            width: Number(widthPercent) || 100,
+            height: Number(heightPercent) || 100,
+        }),
     });
 
-    return imageUrl;
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(`Crop failed: ${error.error || response.statusText}`);
+    }
+
+    const result = await response.json();
+    return result.resultUrl;
 }
 
-// Extract frame execution (placeholder - would use FFmpeg via Trigger.dev)
+// Extract frame execution using Transloadit
 async function executeExtractFrame(node: Node, inputs: Record<string, unknown>): Promise<string> {
     const videoUrl = inputs['video_url'] as string;
     if (!videoUrl) {
         throw new Error('Video URL is required');
     }
 
-    // For now, return a placeholder
-    // In production, this would call Trigger.dev with FFmpeg
-    console.log('Extract frame called with:', {
-        videoUrl,
-        timestamp: inputs['timestamp'] ?? (node.data as { timestamp?: string })?.timestamp ?? '0',
+    // Parse timestamp
+    const timestampStr = (inputs['timestamp'] ?? (node.data as { timestamp?: string })?.timestamp ?? '0') as string;
+    let timestampSeconds = 0;
+
+    if (timestampStr.includes('%')) {
+        // Percentage - default to 0 for now (would need video duration)
+        timestampSeconds = 0;
+    } else if (timestampStr.includes(':')) {
+        const parts = timestampStr.split(':').map(Number);
+        if (parts.length === 3) {
+            timestampSeconds = parts[0] * 3600 + parts[1] * 60 + parts[2];
+        } else if (parts.length === 2) {
+            timestampSeconds = parts[0] * 60 + parts[1];
+        }
+    } else {
+        timestampSeconds = parseFloat(timestampStr) || 0;
+    }
+
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+
+    const response = await fetch(`${baseUrl}/api/process`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            type: 'frame',
+            fileUrl: videoUrl,
+            timestamp: timestampSeconds,
+        }),
     });
 
-    return videoUrl;
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(`Frame extraction failed: ${error.error || response.statusText}`);
+    }
+
+    const result = await response.json();
+    return result.resultUrl;
 }
+

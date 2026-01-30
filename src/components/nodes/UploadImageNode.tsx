@@ -1,8 +1,8 @@
 'use client';
 
-import { memo, useCallback } from 'react';
+import { memo, useCallback, useState } from 'react';
 import { Handle, Position, NodeProps } from '@xyflow/react';
-import { Image, Upload, X, MoreHorizontal } from 'lucide-react';
+import { Upload, X, MoreHorizontal, Loader2 } from 'lucide-react';
 import { UploadImageNodeData } from '@/types/nodes';
 import { useWorkflowStore } from '@/stores/workflow-store';
 import { useDropzone } from 'react-dropzone';
@@ -11,21 +11,89 @@ function UploadImageNodeComponent({ id, data, selected }: NodeProps) {
     const nodeData = data as UploadImageNodeData;
     const updateNodeData = useWorkflowStore((state) => state.updateNodeData);
     const isExecuting = nodeData.status === 'running';
+    const [isUploading, setIsUploading] = useState(false);
+
+    const uploadToTransloadit = async (file: File): Promise<string> => {
+        // Get signed params from our API
+        const paramsResponse = await fetch('/api/upload/params', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: 'image' }),
+        });
+
+        const { params, signature } = await paramsResponse.json();
+
+        // Create form data for Transloadit
+        const formData = new FormData();
+        formData.append('params', params);
+        formData.append('signature', signature);
+        formData.append('file', file);
+
+        // Upload to Transloadit
+        const uploadResponse = await fetch('https://api2.transloadit.com/assemblies', {
+            method: 'POST',
+            body: formData,
+        });
+
+        const assembly = await uploadResponse.json();
+
+        if (assembly.error) {
+            throw new Error(assembly.message || 'Upload failed');
+        }
+
+        // Poll for completion
+        let result = assembly;
+        while (result.ok !== 'ASSEMBLY_COMPLETED') {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            const pollResponse = await fetch(result.assembly_ssl_url);
+            result = await pollResponse.json();
+
+            if (result.error) {
+                throw new Error(result.message || 'Processing failed');
+            }
+        }
+
+        // Return the optimized image URL, or original if optimization not available
+        if (result.results.optimized && result.results.optimized.length > 0) {
+            return result.results.optimized[0].ssl_url;
+        }
+        if (result.results[':original'] && result.results[':original'].length > 0) {
+            return result.results[':original'][0].ssl_url;
+        }
+
+        throw new Error('No upload result');
+    };
 
     const onDrop = useCallback(async (acceptedFiles: File[]) => {
         if (acceptedFiles.length === 0) return;
 
         const file = acceptedFiles[0];
+        setIsUploading(true);
 
-        // For now, create a local URL (Transloadit integration will be added later)
-        const imageUrl = URL.createObjectURL(file);
+        try {
+            // Try Transloadit upload
+            const imageUrl = await uploadToTransloadit(file);
 
-        updateNodeData(id, {
-            imageUrl,
-            fileName: file.name,
-            output: imageUrl,
-            status: 'success',
-        });
+            updateNodeData(id, {
+                imageUrl,
+                fileName: file.name,
+                output: imageUrl,
+                status: 'success',
+            });
+        } catch (error) {
+            console.error('Upload failed, falling back to local:', error);
+
+            // Fallback to local URL if Transloadit fails
+            const localUrl = URL.createObjectURL(file);
+            updateNodeData(id, {
+                imageUrl: localUrl,
+                fileName: file.name,
+                output: localUrl,
+                status: 'success',
+            });
+        } finally {
+            setIsUploading(false);
+        }
     }, [id, updateNodeData]);
 
     const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -34,7 +102,7 @@ function UploadImageNodeComponent({ id, data, selected }: NodeProps) {
             'image/*': ['.jpg', '.jpeg', '.png', '.webp', '.gif'],
         },
         maxFiles: 1,
-        disabled: isExecuting,
+        disabled: isExecuting || isUploading,
     });
 
     const clearImage = () => {
@@ -70,7 +138,15 @@ function UploadImageNodeComponent({ id, data, selected }: NodeProps) {
 
             {/* Content */}
             <div className="p-4">
-                {nodeData.imageUrl ? (
+                {isUploading ? (
+                    <div className="border border-dashed border-[#2C2C2E] rounded-xl p-8 text-center bg-[#0E0E10]">
+                        <div className="w-10 h-10 rounded-full bg-[#1C1C1E] flex items-center justify-center mx-auto mb-3">
+                            <Loader2 className="w-5 h-5 text-[#E1E476] animate-spin" />
+                        </div>
+                        <p className="text-sm text-gray-300 font-medium">Uploading...</p>
+                        <p className="text-[10px] text-gray-500 mt-1">Processing with Transloadit</p>
+                    </div>
+                ) : nodeData.imageUrl ? (
                     <div className="relative group">
                         <img
                             src={nodeData.imageUrl}
@@ -110,7 +186,7 @@ function UploadImageNodeComponent({ id, data, selected }: NodeProps) {
                 type="source"
                 position={Position.Right}
                 id="output"
-                className="!w-3 !h-3 !bg-[#EC4899] !border-2 !border-[#1C1C1E]" // Pink
+                className="!w-3 !h-3 !bg-[#EC4899] !border-2 !border-[#1C1C1E]"
             />
         </div>
     );
