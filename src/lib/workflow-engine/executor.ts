@@ -318,7 +318,7 @@ export class WorkflowExecutor {
         };
 
         const payload = {
-            model: data.model || 'gemini-2.0-flash-exp',
+            model: data.model || 'gemini-2.0-flash',
             systemPrompt: (inputs['system_prompt'] as string) || data.systemPrompt || '',
             userMessage: (inputs['user_message'] as string) || data.userMessage || '',
             images: (inputs['images'] as string[]) || [],

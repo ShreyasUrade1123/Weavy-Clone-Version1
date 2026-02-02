@@ -44,5 +44,8 @@
     "prisma": "^6.19.2",
     "tailwindcss": "^4",
     "typescript": "^5"
+  },
+  "trigger.dev": {
+    "endpointId": "proj_rdsuxydrzxxorhlynnfd"
   }
 }

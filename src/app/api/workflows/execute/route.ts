@@ -141,15 +141,28 @@ export async function POST(request: NextRequest) {
                             break;
 
                         case 'llm':
-                            output = await executeLLMViaTrigger(node, inputs, run.id);
+                            // Check if we should skip Trigger.dev
+                            if (process.env.SKIP_TRIGGER_DEV === 'true') {
+                                output = await executeLLM(node, inputs);
+                            } else {
+                                output = await executeLLMViaTrigger(node, inputs, run.id);
+                            }
                             break;
 
                         case 'cropImage':
-                            output = await executeCropImageViaTrigger(node, inputs, run.id);
+                            if (process.env.SKIP_TRIGGER_DEV === 'true') {
+                                output = await executeCropImage(node, inputs);
+                            } else {
+                                output = await executeCropImageViaTrigger(node, inputs, run.id);
+                            }
                             break;
 
                         case 'extractFrame':
-                            output = await executeExtractFrameViaTrigger(node, inputs, run.id);
+                            if (process.env.SKIP_TRIGGER_DEV === 'true') {
+                                output = await executeExtractFrame(node, inputs);
+                            } else {
+                                output = await executeExtractFrameViaTrigger(node, inputs, run.id);
+                            }
                             break;
 
                         default:
@@ -252,7 +265,7 @@ async function executeLLMViaTrigger(
     }
 
     const payload = {
-        model: (node.data as { model?: string })?.model || 'gemini-2.0-flash-exp',
+        model: (node.data as { model?: string })?.model || 'gemini-2.0-flash',
         systemPrompt: (inputs['system_prompt'] as string) || (node.data as { systemPrompt?: string })?.systemPrompt || '',
         userMessage,
         images: (inputs['images'] as string[]) || [],
@@ -261,9 +274,16 @@ async function executeLLMViaTrigger(
     };
 
     try {
-        const result = await tasks.triggerAndPoll('llm-execution', payload, {
+        // Add a timeout to avoid hanging when Trigger.dev is not running
+        const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Trigger.dev timeout - falling back to direct execution')), 10000)
+        );
+
+        const triggerPromise = tasks.triggerAndPoll('llm-execution', payload, {
             pollIntervalMs: 1000,
         });
+
+        const result = await Promise.race([triggerPromise, timeoutPromise]) as Awaited<typeof triggerPromise>;
 
         if (result.status === 'COMPLETED') {
             return result.output?.response;
@@ -298,9 +318,16 @@ async function executeCropImageViaTrigger(
     };
 
     try {
-        const result = await tasks.triggerAndPoll('crop-image', payload, {
+        // Add a timeout to avoid hanging when Trigger.dev is not running
+        const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Trigger.dev timeout - falling back to direct execution')), 10000)
+        );
+
+        const triggerPromise = tasks.triggerAndPoll('crop-image', payload, {
             pollIntervalMs: 1000,
         });
+
+        const result = await Promise.race([triggerPromise, timeoutPromise]) as Awaited<typeof triggerPromise>;
 
         if (result.status === 'COMPLETED') {
             return result.output?.croppedUrl;
@@ -347,9 +374,16 @@ async function executeExtractFrameViaTrigger(
     };
 
     try {
-        const result = await tasks.triggerAndPoll('extract-frame', payload, {
+        // Add a timeout to avoid hanging when Trigger.dev is not running
+        const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Trigger.dev timeout - falling back to direct execution')), 10000)
+        );
+
+        const triggerPromise = tasks.triggerAndPoll('extract-frame', payload, {
             pollIntervalMs: 1000,
         });
+
+        const result = await Promise.race([triggerPromise, timeoutPromise]) as Awaited<typeof triggerPromise>;
 
         if (result.status === 'COMPLETED') {
             return result.output?.frameUrl;
@@ -370,6 +404,9 @@ async function executeExtractFrameViaTrigger(
 
 // LLM execution (direct call for now, can be moved to Trigger.dev)
 async function executeLLM(node: Node, inputs: Record<string, unknown>): Promise<string> {
+    console.log('[executeLLM] Starting direct LLM execution');
+    console.log('[executeLLM] Inputs:', JSON.stringify(inputs, null, 2));
+
     const { GoogleGenerativeAI } = await import('@google/generative-ai');
 
     const apiKey = process.env.GOOGLE_AI_API_KEY;
@@ -378,28 +415,47 @@ async function executeLLM(node: Node, inputs: Record<string, unknown>): Promise<
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    const modelId = (node.data as { model?: string })?.model || 'gemini-2.0-flash-exp';
+    const modelId = (node.data as { model?: string })?.model || 'gemini-2.0-flash';
+    console.log('[executeLLM] Using model:', modelId);
+
+    const systemPrompt = (inputs['system_prompt'] as string) || (node.data as { systemPrompt?: string })?.systemPrompt || '';
+    console.log('[executeLLM] System prompt:', systemPrompt.substring(0, 100) + '...');
 
     const model = genAI.getGenerativeModel({
         model: modelId,
-        systemInstruction: (inputs['system_prompt'] as string) || (node.data as { systemPrompt?: string })?.systemPrompt,
+        systemInstruction: systemPrompt || undefined,
     });
 
     const userMessage = (inputs['user_message'] as string) || (node.data as { userMessage?: string })?.userMessage;
     if (!userMessage) {
         throw new Error('User message is required');
     }
+    console.log('[executeLLM] User message:', userMessage.substring(0, 100) + '...');
 
     const parts: Array<{ text: string } | { inlineData: { data: string; mimeType: string } }> = [{ text: userMessage }];
 
     // Add images if provided
     const images = (inputs['images'] as string[]) || [];
+    console.log('[executeLLM] Images count:', images.length);
+
     for (const imageUrl of images) {
+        // Skip blob: URLs - they only work in the browser
+        if (imageUrl.startsWith('blob:')) {
+            console.warn('[executeLLM] Skipping blob: URL (browser-only):', imageUrl.substring(0, 50));
+            continue;
+        }
+
         try {
+            console.log('[executeLLM] Fetching image:', imageUrl.substring(0, 80) + '...');
             const response = await fetch(imageUrl);
+            if (!response.ok) {
+                console.warn('[executeLLM] Failed to fetch image, status:', response.status);
+                continue;
+            }
             const buffer = await response.arrayBuffer();
             const base64 = Buffer.from(buffer).toString('base64');
             const mimeType = response.headers.get('content-type') || 'image/jpeg';
+            console.log('[executeLLM] Image fetched, size:', buffer.byteLength, 'mimeType:', mimeType);
 
             parts.push({
                 inlineData: {
@@ -408,22 +464,40 @@ async function executeLLM(node: Node, inputs: Record<string, unknown>): Promise<
                 },
             });
         } catch (error) {
-            console.warn('Failed to fetch image:', imageUrl, error);
+            console.warn('[executeLLM] Failed to fetch image:', imageUrl, error);
         }
     }
+
+    console.log('[executeLLM] Calling Gemini API with', parts.length, 'parts');
+    const startTime = Date.now();
 
     const result = await model.generateContent(parts);
     const response = result.response;
     const text = response.text();
+
+    console.log('[executeLLM] Gemini responded in', Date.now() - startTime, 'ms');
+    console.log('[executeLLM] Response length:', text.length, 'chars');
 
     return text;
 }
 
 // Crop image execution using Transloadit
 async function executeCropImage(node: Node, inputs: Record<string, unknown>): Promise<string> {
+    console.log('[executeCropImage] Starting crop execution');
+    console.log('[executeCropImage] Inputs:', JSON.stringify(inputs, null, 2));
+
     const imageUrl = inputs['image_url'] as string;
     if (!imageUrl) {
         throw new Error('Image URL is required');
+    }
+
+    // Check for blob: URLs - they can't be processed by Transloadit
+    if (imageUrl.startsWith('blob:')) {
+        console.warn('[executeCropImage] blob: URL detected - Transloadit cannot access browser-only URLs');
+        console.warn('[executeCropImage] Returning original URL as fallback (no crop applied)');
+        // Return the original URL as-is since we can't crop blob: URLs server-side
+        // The crop would need to happen in the browser for blob: URLs
+        return imageUrl;
     }
 
     // Get crop parameters
@@ -432,10 +506,10 @@ async function executeCropImage(node: Node, inputs: Record<string, unknown>): Pr
     const widthPercent = inputs['width_percent'] ?? (node.data as { widthPercent?: number })?.widthPercent ?? 100;
     const heightPercent = inputs['height_percent'] ?? (node.data as { heightPercent?: number })?.heightPercent ?? 100;
 
-    // First, get image dimensions to calculate pixel values
-    // For now, use percentages as absolute pixels (Transloadit will handle the conversion)
-    // This is a simplification - in production you'd fetch the image metadata first
+    console.log('[executeCropImage] Crop params:', { xPercent, yPercent, widthPercent, heightPercent });
+
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    console.log('[executeCropImage] Calling /api/process at', baseUrl);
 
     const response = await fetch(`${baseUrl}/api/process`, {
         method: 'POST',
@@ -452,10 +526,12 @@ async function executeCropImage(node: Node, inputs: Record<string, unknown>): Pr
 
     if (!response.ok) {
         const error = await response.json();
+        console.error('[executeCropImage] Crop failed:', error);
         throw new Error(`Crop failed: ${error.error || response.statusText}`);
     }
 
     const result = await response.json();
+    console.log('[executeCropImage] Crop successful, result URL:', result.resultUrl?.substring(0, 80));
     return result.resultUrl;
 }
 

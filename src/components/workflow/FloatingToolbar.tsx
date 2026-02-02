@@ -91,14 +91,14 @@ export default function FloatingToolbar({ onRun, isExecuting = false }: Floating
     }, [onRun]);
 
     return (
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-[#1C1C1E] border border-[#2C2C2E] rounded-lg p-1 shadow-xl z-50">
+        <div className="absolute bottom-[-4px] left-1/2 -translate-x-1/2 flex items-center gap-2 bg-[#212126] border border-[#2C2C2E] rounded-lg p-1 shadow-xl z-50">
             {/* Tool Selection */}
-            <div className="flex bg-[#0E0E10] rounded-md p-0.5">
+            <div className="flex bg-[#212126] rounded-md p-0.5">
                 <button
                     onClick={() => handleToolChange('select')}
                     className={`p-2 rounded-sm transition-colors ${activeTool === 'select'
-                            ? 'bg-[#E1E476] text-black'
-                            : 'text-gray-400 hover:text-white hover:bg-[#2C2C2E]'
+                        ? 'bg-[#E1E476] text-black'
+                        : 'text-gray-400 hover:text-white hover:bg-[#2C2C2E]'
                         }`}
                     title="Select Tool (V) - Click to select, drag to create selection box"
                 >
@@ -107,8 +107,8 @@ export default function FloatingToolbar({ onRun, isExecuting = false }: Floating
                 <button
                     onClick={() => handleToolChange('pan')}
                     className={`p-2 rounded-sm transition-colors ${activeTool === 'pan'
-                            ? 'bg-[#E1E476] text-black'
-                            : 'text-gray-400 hover:text-white hover:bg-[#2C2C2E]'
+                        ? 'bg-[#E1E476] text-black'
+                        : 'text-gray-400 hover:text-white hover:bg-[#2C2C2E]'
                         }`}
                     title="Pan Tool (H or Space) - Drag to pan canvas"
                 >

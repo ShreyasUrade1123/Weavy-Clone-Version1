@@ -1,5 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { Copy, Edit2, Lock, Trash2, X } from 'lucide-react';
+import { useViewport } from '@xyflow/react';
 import { useEffect, useRef } from 'react';
 
 interface NodeContextMenuProps {
@@ -23,6 +24,7 @@ export function NodeContextMenu({
     onDelete,
     isLocked
 }: NodeContextMenuProps) {
+    const { zoom } = useViewport();
     const menuRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -32,12 +34,19 @@ export function NodeContextMenu({
             }
         };
 
+        const preventZoom = (e: WheelEvent) => {
+            e.preventDefault();
+            e.stopPropagation();
+        };
+
         if (isOpen) {
             document.addEventListener('mousedown', handleClickOutside);
+            window.addEventListener('wheel', preventZoom, { passive: false, capture: true });
         }
 
         return () => {
             document.removeEventListener('mousedown', handleClickOutside);
+            window.removeEventListener('wheel', preventZoom, { capture: true });
         };
     }, [isOpen, onClose]);
 
@@ -51,10 +60,12 @@ export function NodeContextMenu({
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
                 transition={{ duration: 0.1 }}
-                className="absolute z-50 w-32 bg-[#1C1C1E] border border-[#2B2B2F] rounded-sm shadow-2xl p-0.5 flex flex-col gap-0"
+                className="absolute z-50 w-84 bg-[#1C1C1E] border border-[#2B2B2F] rounded-sm shadow-2xl p-0.5 flex flex-col gap-0 nowheel nopan"
                 style={{
                     top: position.y,
-                    left: position.x
+                    left: position.x,
+                    transform: `scale(${1 / zoom})`,
+                    transformOrigin: 'top left'
                 }}
             >
                 <MenuItem
@@ -102,7 +113,7 @@ function MenuItem({ icon: Icon, label, shortcut, onClick, variant = 'default' }:
                 onClick();
             }}
             className={`
-                w-full flex items-center justify-between px-1 py-0.5 rounded-s text-[7px] transition-colors
+                w-full flex items-center justify-between px-2 py-2 rounded-s text-[18px] transition-colors
                 ${variant === 'danger'
                     ? 'text-red-400 hover:bg-red-500/10 hover:text-red-300'
                     : 'text-gray-300 hover:bg-[#2B2B2F] hover:text-white'}
@@ -118,7 +129,7 @@ function MenuItem({ icon: Icon, label, shortcut, onClick, variant = 'default' }:
                 {label}
             </span>
             {shortcut && (
-                <span className="text-[7px] text-gray-500 font-medium font-sans">{shortcut}</span>
+                <span className="text-[18px] text-gray-500 font-medium font-italic font-sans">{shortcut}</span>
             )}
         </button>
     );

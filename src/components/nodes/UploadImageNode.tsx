@@ -112,7 +112,7 @@ function UploadImageNodeComponent({ id, data, selected }: NodeProps) {
         <>
             <div
                 className={`
-                    group relative rounded-2xl min-w-[340px] shadow-2xl transition-all duration-200
+                    group relative rounded-xl min-w-[460px] shadow-2xl transition-all duration-200
                     ${selected ? 'bg-[#2B2B2F] ring-2 ring-inset ring-[#333337]' : 'bg-[#212126]'}
                     ${isExecuting ? 'ring-2 ring-[#C084FC]/50' : ''}
                     ${nodeData.status === 'error' ? 'ring-2 ring-red-500' : ''}
@@ -146,21 +146,21 @@ function UploadImageNodeComponent({ id, data, selected }: NodeProps) {
                 {/* Content */}
                 <div className="px-4.5 pb-4.5">
                     {/* Dropzone Container with Aspect Ratio */}
-                    <div className="relative w-full aspect-square rounded-xl overflow-hidden mb-3 bg-[#1A1A1D]">
+                    <div className="relative w-full h-[430px] rounded-lg overflow-hidden mb-3 bg-[#212126] border border-[#323236]">
 
                         {/* Checkerboard Pattern Background */}
                         {!nodeData.imageUrl && !isUploading && (
                             <div
-                                className="absolute inset-0 opacity-20 pointer-events-none"
+                                className="absolute inset-0 pointer-events-none"
                                 style={{
                                     backgroundImage: `
-                                        linear-gradient(45deg, #2A2A2E 25%, transparent 25%),
-                                        linear-gradient(-45deg, #2A2A2E 25%, transparent 25%),
-                                        linear-gradient(45deg, transparent 75%, #2A2A2E 75%),
-                                        linear-gradient(-45deg, transparent 75%, #2A2A2E 75%)
+                                        linear-gradient(45deg, #2A2A2F 25%, transparent 25%),
+                                        linear-gradient(-45deg, #2A2A2F 25%, transparent 25%),
+                                        linear-gradient(45deg, transparent 75%, #2A2A2F 75%),
+                                        linear-gradient(-45deg, transparent 75%, #2A2A2F 75%)
                                     `,
-                                    backgroundSize: '20px 20px',
-                                    backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px'
+                                    backgroundSize: '30px 30px',
+                                    backgroundPosition: '0 0, 0 15px, 15px -15px, -15px 0px'
                                 }}
                             />
                         )}
@@ -216,8 +216,8 @@ function UploadImageNodeComponent({ id, data, selected }: NodeProps) {
                         onChange={(e) => updateNodeData(id, { imageUrl: e.target.value, output: e.target.value })}
                         onKeyDown={(e) => e.stopPropagation()}
                         className={`
-                            w-full bg-[#2C2C30] rounded-lg px-4 py-3
-                            text-[14px] text-gray-200 placeholder-gray-500
+                            w-full bg-[#212126] rounded-sm px-3 py-2
+                            text-[12px] border border-[#323236] font-regular text-gray-200 placeholder-brown-200
                             focus:outline-none focus:ring-1 focus:ring-[#3D3D41]
                             transition-colors font-medium
                         `}

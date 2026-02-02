@@ -83,7 +83,7 @@ export function LeftSidebar() {
     }
 
     return (
-        <div className="w-64 bg-[#212126] border-r border-gray-800 flex flex-col">
+        <div className="w-[300px] bg-[#212126] border-r border-gray-800 flex flex-col">
             {/* Header */}
             <div className="flex items-center justify-between p-4 border-b border-gray-800">
                 <h2 className="font-semibold text-white">Nodes</h2>

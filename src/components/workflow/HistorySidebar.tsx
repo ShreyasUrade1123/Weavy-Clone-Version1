@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
     History,
     ChevronDown,
@@ -44,6 +44,10 @@ export function HistorySidebar({ workflowId, isOpen, onClose }: HistorySidebarPr
     const [expandedRuns, setExpandedRuns] = useState<Set<string>>(new Set());
     const [isLoading, setIsLoading] = useState(false);
 
+    // Use ref to access runs without re-triggering effect
+    const runsRef = useRef<WorkflowRunDisplay[]>([]);
+    runsRef.current = runs;
+
     useEffect(() => {
         if (!workflowId || workflowId === 'new') {
             setRuns([]);
@@ -68,13 +72,14 @@ export function HistorySidebar({ workflowId, isOpen, onClose }: HistorySidebarPr
         fetchRuns();
 
         const interval = setInterval(() => {
-            if (runs.some(r => r.status === 'RUNNING')) {
+            // Use ref to check status without triggering re-renders
+            if (runsRef.current.some(r => r.status === 'RUNNING')) {
                 fetchRuns();
             }
         }, 5000);
 
         return () => clearInterval(interval);
-    }, [workflowId, runs]);
+    }, [workflowId]); // Only depend on workflowId
 
     const toggleRun = (runId: string) => {
         setExpandedRuns(prev => {

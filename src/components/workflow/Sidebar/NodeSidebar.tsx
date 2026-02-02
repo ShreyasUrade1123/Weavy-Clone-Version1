@@ -37,12 +37,12 @@ const NodeCard = ({ type, label, icon: Icon }: NodeCardProps) => {
 
     return (
         <div
-            className="bg-white rounded-xl p-4 flex flex-col items-center justify-center gap-2 cursor-grab active:cursor-grabbing hover:bg-gray-100 transition-colors min-h-[80px]"
+            className="bg-[#212126] border border-white/20 rounded-sm p-4 flex flex-col items-center justify-center gap-2 cursor-grab active:cursor-grabbing hover:bg-[#353539] transition-colors min-h-[105px]"
             onDragStart={(event) => onDragStart(event, type)}
             draggable
         >
-            <Icon className="w-5 h-5 text-gray-700" />
-            <span className="text-[11px] text-center font-medium text-gray-800 leading-tight">
+            <Icon className="w-5 h-5 text-white" />
+            <span className="text-[12px] text-center font-medium text-white leading-tight">
                 {label}
             </span>
         </div>
@@ -91,41 +91,44 @@ export default function NodeSidebar({ isOpen, onClose, onRename }: NodeSidebarPr
     );
 
     return (
-        <div className="w-[220px] bg-[#151517] flex flex-col h-full z-20 border-r border-[#2C2C2E]">
+        <div
+            className="w-[240px] bg-[#212126] flex flex-col h-full z-20 border-r border-[#2C2C2E]"
+            style={{ fontFamily: 'var(--font-dm-sans)' }}
+        >
             {/* Project Name Header */}
-            <div className="px-4 py-3 border-b border-[#2C2C2E]">
+            <div className="px-4 py-5 border-b border-[#2C2C2E]">
                 <input
                     type="text"
                     value={localName}
                     onChange={(e) => setLocalName(e.target.value)}
                     onKeyDown={handleNameKeyDown}
                     onBlur={handleNameBlur}
-                    className="w-full bg-transparent text-white font-medium text-sm focus:outline-none hover:bg-[#1C1C1E] px-2 py-1.5 rounded-lg transition-colors"
+                    className="w-full bg-transparent text-white font-medium text-[14px] focus:outline-none hover:bg-[#1C1C1E] px-2 py-1.5 rounded-lg transition-colors"
                     placeholder="untitled"
                 />
             </div>
 
             {/* Search Header */}
             <div className="p-4 border-b border-[#2C2C2E]">
-                <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                    <input
-                        type="text"
-                        placeholder="Search"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full bg-[#1C1C1E] border border-[#2C2C2E] rounded-lg pl-9 pr-8 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-gray-500 transition-colors"
-                    />
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                        <ArrowUpDown className="w-3 h-3 text-gray-500" />
+                <div className="flex items-center gap-2">
+                    <div className="relative flex-1">
+                        <Search className="absolute left-2 top-[49%] -translate-y-1/2 w-3.5 h-3.5 text-brown-500" />
+                        <input
+                            type="text"
+                            placeholder="Search"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full bg-[#212126] border border-white/20 rounded-md pl-7 pr-0 py-1 text-[12px] text-white placeholder-brown-500 focus:outline-none focus:border-gray-500 transition-colors"
+                        />
                     </div>
+                    <ArrowUpDown className="w-4 h-4 text-gray-500 cursor-pointer hover:text-white transition-colors" />
                 </div>
 
-                <div className="flex items-center gap-2 mt-3 text-[11px] font-medium">
-                    <span className="text-white">From</span>
-                    <span className="text-[#E1E476] border-b border-[#E1E476] pb-0.5">Input</span>
-                    <span className="text-gray-500">to</span>
-                    <span className="text-gray-400 border-b border-gray-600 pb-0.5">Output</span>
+                <div className="flex items-center gap-2 mt-2 text-[12px] font-regular text-white">
+                    <span>From</span>
+                    <span className="bg-[#353539] px-1 py-0 rounded-[4px] text-gray-400 text-[12px]" style={{ fontFamily: 'var(--font-dm-mono)' }}>Input</span>
+                    <span>to</span>
+                    <span className="bg-[#353539] px-1 py-0 rounded-[4px] text-gray-400 text-[12px]" style={{ fontFamily: 'var(--font-dm-mono)' }}>Output</span>
                 </div>
             </div>
 
@@ -133,7 +136,7 @@ export default function NodeSidebar({ isOpen, onClose, onRename }: NodeSidebarPr
             <div className="flex-1 overflow-y-auto px-3 py-4 scrollbar-hide">
                 {/* Quick Access Section */}
                 <div className="mb-6">
-                    <h3 className="text-sm font-semibold text-white mb-3 px-1">Quick access</h3>
+                    <h3 className="text-[16px] font-medium text-white mb-3 px-1">Quick access</h3>
                     <div className="grid grid-cols-2 gap-2">
                         {filteredQuickAccess.map((node, index) => (
                             <NodeCard
@@ -148,8 +151,8 @@ export default function NodeSidebar({ isOpen, onClose, onRename }: NodeSidebarPr
 
                 {/* Toolbox Section */}
                 <div>
-                    <h3 className="text-sm font-semibold text-white mb-2 px-1">Toolbox</h3>
-                    <p className="text-[10px] text-gray-500 mb-3 px-1">Editing</p>
+                    <h3 className="text-[16px] font-medium text-white mb-5 px-1">Toolbox</h3>
+                    <p className="text-[12px] text-brown-500 mb-3 px-1" style={{ fontFamily: 'var(--font-dm-mono)' }}>Editing</p>
                     <div className="grid grid-cols-2 gap-2">
                         {filteredToolbox.map((node, index) => (
                             <NodeCard

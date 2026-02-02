@@ -109,7 +109,7 @@ function UploadVideoNodeComponent({ id, data, selected }: NodeProps) {
         <>
             <div
                 className={`
-                    group relative rounded-2xl min-w-[340px] shadow-2xl transition-all duration-200
+                    group relative rounded-xl min-w-[460px] shadow-2xl transition-all duration-200
                     ${selected ? 'bg-[#2B2B2F] ring-2 ring-inset ring-[#333337]' : 'bg-[#212126]'}
                     ${isExecuting ? 'ring-2 ring-[#C084FC]/50' : ''}
                     ${nodeData.status === 'error' ? 'ring-2 ring-red-500' : ''}
@@ -212,8 +212,8 @@ function UploadVideoNodeComponent({ id, data, selected }: NodeProps) {
                         onChange={(e) => updateNodeData(id, { videoUrl: e.target.value, output: e.target.value })}
                         onKeyDown={(e) => e.stopPropagation()}
                         className={`
-                            w-full bg-[#2C2C30] rounded-lg px-4 py-3
-                            text-[14px] text-gray-200 placeholder-gray-500
+                            w-full bg-[#2C2C30] rounded-sm px-4 py-3
+                            text-[14px] font-regular text-gray-200 placeholder-gray-200
                             focus:outline-none focus:ring-1 focus:ring-[#3D3D41]
                             transition-colors font-medium
                         `}

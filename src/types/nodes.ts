@@ -59,6 +59,11 @@ export interface CropImageNodeData extends BaseNodeData {
   widthPercent: number;
   heightPercent: number;
   croppedUrl?: string;
+  aspectRatio: '1:1' | '3:4' | '4:3' | '16:9' | '9:16' | 'custom';
+  sourceWidth?: number;
+  sourceHeight?: number;
+  outputWidth: number;
+  outputHeight: number;
 }
 
 // Extract Frame Node

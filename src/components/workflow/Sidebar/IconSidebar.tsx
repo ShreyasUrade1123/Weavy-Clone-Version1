@@ -3,8 +3,8 @@
 import React from 'react';
 import {
     Search,
-    Clock,
-    Folder,
+    History,
+    Briefcase,
     Box,
     Package,
     Sparkles,
@@ -12,6 +12,7 @@ import {
     MessageSquare
 } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { UserButton } from '@clerk/nextjs';
 
 interface IconSidebarProps {
@@ -22,8 +23,8 @@ interface IconSidebarProps {
 export default function IconSidebar({ activeSection, onSectionClick }: IconSidebarProps) {
     const icons = [
         { id: 'search', icon: Search, label: 'Search' },
-        { id: 'history', icon: Clock, label: 'History' },
-        { id: 'projects', icon: Folder, label: 'Projects' },
+        { id: 'history', icon: History, label: 'History' },
+        { id: 'projects', icon: Briefcase, label: 'Projects' },
         { id: 'assets', icon: Box, label: 'Assets' },
         { id: 'models', icon: Package, label: 'Models' },
         { id: 'toolkit', icon: Box, label: 'Toolkit' },
@@ -31,19 +32,17 @@ export default function IconSidebar({ activeSection, onSectionClick }: IconSideb
     ];
 
     return (
-        <div className="w-[52px] bg-[#212126] flex flex-col items-center py-4 z-30">
+        <div className="w-[57px] bg-[#212126] flex flex-col items-center py-[18px] z-30">
             {/* Logo / Home */}
             <Link
                 href="/dashboard"
-                className="w-8 h-8 flex items-center justify-center text-white font-bold text-lg hover:opacity-90 transition-opacity mb-6"
+                className="w-8 h-8 flex items-center justify-center hover:opacity-90 transition-opacity mb-[33px]"
             >
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-white">
-                    <path d="M4 8L8 4L12 8L16 4L20 8V16L16 20L12 16L8 20L4 16V8Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
-                </svg>
+                <Image src="/logo.svg" alt="Galaxy.ai" width={32} height={32} className="w-6 h-6" />
             </Link>
 
             {/* Navigation Icons */}
-            <div className="flex flex-col gap-1">
+            <div className="flex flex-col gap-[9px]">
                 {icons.map((item) => {
                     const Icon = item.icon;
                     const isActive = activeSection === item.id;
@@ -54,13 +53,13 @@ export default function IconSidebar({ activeSection, onSectionClick }: IconSideb
                             className={`
                                 w-10 h-10 flex items-center justify-center rounded-lg transition-all
                                 ${isActive
-                                    ? 'bg-[#E1E476] text-black'
-                                    : 'text-gray-400 hover:text-white hover:bg-[#1C1C1E]'
+                                    ? 'bg-[#FAFFC7] text-black'
+                                    : 'text-gray-300 hover:text-white hover:bg-[#1C1C1E]'
                                 }
                             `}
                             title={item.label}
                         >
-                            <Icon className="w-5 h-5" />
+                            <Icon className="w-4.5 h-4.5" strokeWidth={1.5} />
                         </button>
                     );
                 })}

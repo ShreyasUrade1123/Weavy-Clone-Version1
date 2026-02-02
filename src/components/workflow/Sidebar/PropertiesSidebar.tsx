@@ -6,9 +6,9 @@ import { Info, Sparkles } from 'lucide-react';
 import { LLMNodeData } from '@/types/nodes';
 
 const MODELS = [
-    { id: 'gemini-2.0-flash-exp', name: 'Gemini 2.5 Flash' },
-    { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro' },
-    { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash' },
+    { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash' },
+    { id: 'gemini-1.5-pro-002', name: 'Gemini 1.5 Pro' },
+    { id: 'gemini-1.5-flash-002', name: 'Gemini 1.5 Flash' },
     { id: 'gpt-4o', name: 'GPT-4o' },
     { id: 'claude-3-5-sonnet', name: 'Claude 3.5 Sonnet' },
 ];
@@ -83,7 +83,7 @@ export default function PropertiesSidebar() {
                     </div>
                     <div className="relative">
                         <select
-                            value={data.model || 'gemini-2.0-flash-exp'}
+                            value={data.model || 'gemini-2.0-flash'}
                             onChange={handleModelChange}
                             className="w-full bg-[#1C1C1E] border border-[#2C2C2E] rounded-lg px-3 py-2.5 text-xs text-gray-200 focus:outline-none focus:border-gray-500 appearance-none"
                         >

@@ -237,7 +237,7 @@ export default function DashboardPage() {
                                     href={`/workflows/new?template=${template.id}`}
                                     className="flex-shrink-0 group relative snap-start"
                                 >
-                                    <div className="w-[170px] h-[115px] rounded-lg overflow-hidden relative">
+                                    <div className="w-[170px] h-[115px]  rounded-lg overflow-hidden relative">
                                         <div className={`absolute inset-0 bg-gradient-to-br ${template.color} opacity-80 group-hover:opacity-100 transition-opacity`}>
                                             <img
                                                 src={template.image}

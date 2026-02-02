@@ -111,7 +111,7 @@ export const useWorkflowStore = create<WorkflowState>()(
                             ...(type === 'text' && { text: '' }),
                             ...(type === 'uploadImage' && { imageUrl: undefined, fileName: undefined }),
                             ...(type === 'uploadVideo' && { videoUrl: undefined, fileName: undefined }),
-                            ...(type === 'llm' && { model: 'gemini-2.0-flash-exp', systemPrompt: '', userMessage: '', images: [], response: '' }),
+                            ...(type === 'llm' && { model: 'gemini-2.0-flash', systemPrompt: '', userMessage: '', images: [], response: '' }),
                             ...(type === 'cropImage' && { imageUrl: undefined, xPercent: 0, yPercent: 0, widthPercent: 100, heightPercent: 100 }),
                             ...(type === 'extractFrame' && { videoUrl: undefined, timestamp: '0' }),
                             // Override with initial data

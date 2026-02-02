@@ -66,7 +66,7 @@ export const PRODUCT_MARKETING_KIT: WorkflowTemplate = {
             position: { x: 700, y: 200 },
             data: {
                 label: 'Generate Product Description',
-                model: 'gemini-2.0-flash-exp',
+                model: 'gemini-2.0-flash',
                 status: 'idle',
             } as WorkflowNodeData,
         },
@@ -110,7 +110,7 @@ export const PRODUCT_MARKETING_KIT: WorkflowTemplate = {
             position: { x: 1000, y: 350 },
             data: {
                 label: 'Generate Marketing Post',
-                model: 'gemini-2.0-flash-exp',
+                model: 'gemini-2.0-flash',
                 status: 'idle',
             } as WorkflowNodeData,
         },
