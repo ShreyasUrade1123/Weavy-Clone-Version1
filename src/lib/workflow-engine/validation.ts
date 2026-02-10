@@ -29,10 +29,16 @@ export function isValidConnection(
 
     // Find handle configurations
     const sourceOutput = sourceConfig.outputs.find(o => o.id === sourceHandle);
-    const targetInput = targetConfig.inputs.find(i => i.id === targetHandle);
+    let targetInput = targetConfig.inputs.find(i => i.id === targetHandle);
 
     if (!sourceOutput) {
         return { valid: false, reason: 'Invalid source handle' };
+    }
+
+    // Special handling for LLM node's dynamic image inputs (image_1, image_2, etc.)
+    if (!targetInput && targetType === 'llm' && targetHandle.startsWith('image_')) {
+        // Treat dynamic image handles as image type inputs
+        targetInput = { id: targetHandle, type: 'image', label: 'Image' };
     }
 
     if (!targetInput) {
@@ -45,17 +51,6 @@ export function isValidConnection(
             valid: false,
             reason: `Type mismatch: cannot connect ${sourceOutput.type} to ${targetInput.type}`
         };
-    }
-
-    // Specific validation for ExtractFrame node
-    // Only allow connection from UploadVideo node
-    if (targetType === 'extractFrame' && targetHandle === 'video_url') {
-        if (sourceType !== 'uploadVideo') {
-            return {
-                valid: false,
-                reason: 'Extract Frame node only accepts input from Upload Video node'
-            };
-        }
     }
 
     // Check if target input already has a connection (single input only for most handles)

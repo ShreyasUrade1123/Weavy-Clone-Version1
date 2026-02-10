@@ -92,7 +92,7 @@ export default function NodeSidebar({ isOpen, onClose, onRename }: NodeSidebarPr
 
     return (
         <div
-            className="w-[240px] bg-[#212126] flex flex-col h-full z-20 border-r border-[#2C2C2E]"
+            className="w-[240px] bg-[#212126] flex flex-col h-full z-30 border-r border-[#2C2C2E] fixed top-0 left-[57px]"
             style={{ fontFamily: 'var(--font-dm-sans)' }}
         >
             {/* Project Name Header */}

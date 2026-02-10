@@ -11,7 +11,7 @@ export const textNodeDataSchema = z.object({
 
 export const uploadImageNodeDataSchema = z.object({
     label: z.string(),
-    imageUrl: z.string().url().optional(),
+    imageUrl: z.string().optional(),
     fileName: z.string().optional(),
     status: z.enum(['idle', 'running', 'success', 'error']).optional(),
     output: z.unknown().optional(),
@@ -20,7 +20,7 @@ export const uploadImageNodeDataSchema = z.object({
 
 export const uploadVideoNodeDataSchema = z.object({
     label: z.string(),
-    videoUrl: z.string().url().optional(),
+    videoUrl: z.string().optional(),
     fileName: z.string().optional(),
     status: z.enum(['idle', 'running', 'success', 'error']).optional(),
     output: z.unknown().optional(),
@@ -41,12 +41,12 @@ export const llmNodeDataSchema = z.object({
 
 export const cropImageNodeDataSchema = z.object({
     label: z.string(),
-    imageUrl: z.string().url().optional(),
+    imageUrl: z.string().optional(),
     xPercent: z.number().min(0).max(100),
     yPercent: z.number().min(0).max(100),
     widthPercent: z.number().min(0).max(100),
     heightPercent: z.number().min(0).max(100),
-    croppedUrl: z.string().url().optional(),
+    croppedUrl: z.string().optional(),
     status: z.enum(['idle', 'running', 'success', 'error']).optional(),
     output: z.unknown().optional(),
     error: z.string().optional(),
@@ -54,9 +54,9 @@ export const cropImageNodeDataSchema = z.object({
 
 export const extractFrameNodeDataSchema = z.object({
     label: z.string(),
-    videoUrl: z.string().url().optional(),
+    videoUrl: z.string().optional(),
     timestamp: z.string(),
-    frameUrl: z.string().url().optional(),
+    frameUrl: z.string().optional(),
     status: z.enum(['idle', 'running', 'success', 'error']).optional(),
     output: z.unknown().optional(),
     error: z.string().optional(),
@@ -74,12 +74,12 @@ export const nodeSchema = z.object({
     type: z.enum(['text', 'uploadImage', 'uploadVideo', 'llm', 'cropImage', 'extractFrame']),
     position: positionSchema,
     data: z.union([
-        textNodeDataSchema,
-        uploadImageNodeDataSchema,
-        uploadVideoNodeDataSchema,
-        llmNodeDataSchema,
-        cropImageNodeDataSchema,
-        extractFrameNodeDataSchema,
+        textNodeDataSchema.passthrough(),
+        uploadImageNodeDataSchema.passthrough(),
+        uploadVideoNodeDataSchema.passthrough(),
+        llmNodeDataSchema.passthrough(),
+        cropImageNodeDataSchema.passthrough(),
+        extractFrameNodeDataSchema.passthrough(),
     ]),
 });
 

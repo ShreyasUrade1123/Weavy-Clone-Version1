@@ -35,7 +35,7 @@ interface WorkflowState {
     setWorkflowName: (name: string) => void;
 
     // Node actions
-    addNode: (type: NodeType, position: { x: number; y: number }, initialData?: Partial<WorkflowNodeData>) => void;
+    addNode: (type: NodeType, position: { x: number; y: number }, initialData?: Partial<WorkflowNodeData>) => string;
     updateNodeData: (nodeId: string, data: Partial<WorkflowNodeData>) => void;
     deleteNode: (nodeId: string) => void;
     onNodesChange: (changes: NodeChange[]) => void;
@@ -110,8 +110,9 @@ export const useWorkflowStore = create<WorkflowState>()(
 
                 addNode: (type, position, initialData) => {
                     const config = NODE_CONFIG[type];
+                    const newNodeId = generateNodeId();
                     const newNode: Node<WorkflowNodeData> = {
-                        id: generateNodeId(),
+                        id: newNodeId,
                         type,
                         position,
                         data: {
@@ -131,6 +132,7 @@ export const useWorkflowStore = create<WorkflowState>()(
 
                     set((state) => ({ nodes: [...state.nodes, newNode] }));
                     get().saveToHistory();
+                    return newNodeId;
                 },
 
                 updateNodeData: (nodeId, data) => {

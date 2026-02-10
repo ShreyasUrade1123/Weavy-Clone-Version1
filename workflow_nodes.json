@@ -1,0 +1,87 @@
+[
+  {
+    "id": "node_1770703277498_exg900m47",
+    "type": "text",
+    "position": {
+      "x": 224,
+      "y": 544
+    },
+    "label": "Prompt"
+  },
+  {
+    "id": "node_1770703305598_qx0jg3y06",
+    "type": "cropImage",
+    "position": {
+      "x": 704,
+      "y": 1184
+    },
+    "label": "Crop Image",
+    "imageUrl": "https://pub-e8fef8c0e03b44acb340577811800829.r2.dev/057d8f4218f348049f83e28f0936aad9/8a7fa8fd6c6e48f0a1d8caae9f42d4f8/79bbf3bc1ebe48f18369b38eb0f6e00d.webp"
+  },
+  {
+    "id": "node_1770705998501_klxnyjk2a",
+    "type": "uploadImage",
+    "position": {
+      "x": 160,
+      "y": 896
+    },
+    "label": "Upload Image",
+    "imageUrl": "https://pub-e8fef8c0e03b44acb340577811800829.r2.dev/057d8f4218f348049f83e28f0936aad9/8a7fa8fd6c6e48f0a1d8caae9f42d4f8/79bbf3bc1ebe48f18369b38eb0f6e00d.webp"
+  },
+  {
+    "id": "node_1770706098561_vljgyvwxp",
+    "type": "uploadVideo",
+    "position": {
+      "x": 416,
+      "y": 1808
+    },
+    "label": "Upload Video",
+    "videoUrl": "blob:http://localhost:3000/6013c29f-2ef3-4f25-9f62-7fec5a352583"
+  },
+  {
+    "id": "node_1770709873338_5k8uuk9cv",
+    "type": "llm",
+    "position": {
+      "x": 1312,
+      "y": 816
+    },
+    "label": "Run LLM"
+  },
+  {
+    "id": "node_1770712086406_cc6yw71yb",
+    "type": "text",
+    "position": {
+      "x": 704,
+      "y": 848
+    },
+    "label": "Prompt"
+  },
+  {
+    "id": "node_1770712294818_xa5rbbn7n",
+    "type": "extractFrame",
+    "position": {
+      "x": 1168,
+      "y": 1808
+    },
+    "label": "Extract Frame",
+    "videoUrl": "blob:http://localhost:3000/6013c29f-2ef3-4f25-9f62-7fec5a352583"
+  },
+  {
+    "id": "node_1770712302524_kjq34byt4",
+    "type": "text",
+    "position": {
+      "x": 1328,
+      "y": 1376
+    },
+    "label": "Prompt"
+  },
+  {
+    "id": "node_1770713326406_x90b8xluk",
+    "type": "llm",
+    "position": {
+      "x": 2176,
+      "y": 1632
+    },
+    "label": "Run LLM"
+  }
+]

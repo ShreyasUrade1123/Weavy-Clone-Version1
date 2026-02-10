@@ -46,6 +46,7 @@ export interface LLMNodeData extends BaseNodeData {
   systemPrompt?: string;
   userMessage?: string;
   images?: string[];
+  imageInputIds?: string[]; // IDs for dynamically added image inputs
   response?: string;
   temperature?: number;
   thinking?: boolean;

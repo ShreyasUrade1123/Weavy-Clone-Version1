@@ -101,6 +101,15 @@ function LLMNodeComponent({ id, data, selected }: NodeProps) {
     const isExecuting = nodeData.status === 'running';
     const [isMenuOpen, setIsMenuOpen] = useState(false);
 
+    const handleAddImageInput = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        const newId = `image_${Date.now()}`;
+        const currentIds = nodeData.imageInputIds || [];
+        updateNodeData(id, {
+            imageInputIds: [...currentIds, newId]
+        });
+    };
+
     const handleRunNode = async (e: React.MouseEvent) => {
         e.stopPropagation();
         console.log('Run node:', id);
@@ -219,7 +228,10 @@ function LLMNodeComponent({ id, data, selected }: NodeProps) {
 
             {/* Footer */}
             <div className="px-4 pt-[10px] pb-[16px] flex items-center justify-between">
-                <button className="flex items-center px-2.5 gap-0.5 text-white hover:text-gray-200 transition-colors group/btn">
+                <button
+                    onClick={handleAddImageInput}
+                    className="flex items-center px-2.5 gap-0.5 text-white hover:text-gray-200 transition-colors group/btn"
+                >
                     <Plus className="w-5 h-5 stroke-[0.7px]" />
                     <span className="text-[12px] font-medium" style={{ fontFamily: 'var(--font-dm-sans)' }}>Add another image input</span>
                 </button>
@@ -284,6 +296,21 @@ function LLMNodeComponent({ id, data, selected }: NodeProps) {
                     isRing={true}
                 />
             </div>
+
+            {/* Dynamic Image Handles */}
+            {nodeData.imageInputIds?.map((imageId, index) => (
+                <div key={imageId} className="absolute" style={{ top: `${200 + (index + 1) * 60}px`, left: 0 }}>
+                    <CustomHandle
+                        id={imageId}
+                        type="target"
+                        position={Position.Left}
+                        color="#10B981" // Green
+                        label={`Image ${index + 2}`}
+                        selected={selected || false}
+                        isRing={true}
+                    />
+                </div>
+            ))}
 
             {/* 4. Output Handle (Top Right) */}
             <div className="absolute top-[80px]" style={{ right: 0 }}>

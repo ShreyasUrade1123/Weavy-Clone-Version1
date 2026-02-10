@@ -23,6 +23,7 @@ import { useCanvasToolStore } from '@/stores/canvas-tool-store';
 import { isValidConnection as validateConnection } from '@/lib/workflow-engine/validation';
 import { NodeType } from '@/types/nodes';
 import FloatingToolbar from '@/components/workflow/FloatingToolbar';
+import { ContextConnectionMenu } from '@/components/workflow/ContextConnectionMenu';
 
 function WorkflowCanvasInner() {
     const reactFlowWrapper = useRef<HTMLDivElement>(null);
@@ -30,6 +31,12 @@ function WorkflowCanvasInner() {
     const params = useParams();
     const workflowId = params?.id?.[0] as string | undefined;
     const [isExecuting, setIsExecuting] = useState(false);
+    const [contextMenu, setContextMenu] = useState<{
+        menu: { x: number; y: number };
+        flow: { x: number; y: number };
+        sourceId: string;
+        handleId: string
+    } | null>(null);
 
     // Tool state
     const activeTool = useCanvasToolStore((state) => state.activeTool);
@@ -164,6 +171,120 @@ function WorkflowCanvasInner() {
         [nodes, edges, onConnect]
     );
 
+    // Validate connections during drag (for visual feedback)
+    const isValidConnectionCallback = useCallback(
+        (connection: Edge | Connection) => {
+            if (!connection.source || !connection.target) return false;
+
+            const sourceNode = nodes.find(n => n.id === connection.source);
+            const targetNode = nodes.find(n => n.id === connection.target);
+
+            if (!sourceNode || !targetNode) return false;
+
+            const validation = validateConnection(
+                sourceNode,
+                connection.sourceHandle || 'output',
+                targetNode,
+                connection.targetHandle || 'input',
+                edges
+            );
+
+            return validation.valid;
+        },
+        [nodes, edges]
+    );
+
+
+
+    const handleConnectEnd = useCallback(
+        (event: any, connectionState: any) => {
+            // connectionState: { fromNode: Node, fromHandle: Handle, isValid: boolean }
+            // If isValid is false, it means we dropped on empty space (or invalid handle)
+            // But we only care if we dropped on empty space. 
+            // React Flow documentation says: onConnectEnd event is triggered when a connection drag ends.
+            // If dropping on a pane, event.target will likely be the pane or background.
+
+            if (!connectionState.isValid) {
+                // Determine drop position
+                let clientX, clientY;
+                if (event instanceof MouseEvent) {
+                    clientX = event.clientX;
+                    clientY = event.clientY;
+                } else if (event instanceof TouchEvent) {
+                    clientX = event.touches[0].clientX;
+                    clientY = event.touches[0].clientY;
+                }
+
+                if (clientX !== undefined && clientY !== undefined && reactFlowWrapper.current) {
+                    // Project to screen coordinates for menu positioning (it's absolute positioned)
+                    // But we likely want to render it inside the flow wrapper? 
+                    // Let's use screenToFlowPosition for the Node creation later, but for the menu itself, 
+                    // we can position it relative to the viewport or flow.
+                    // Let's use flow position for everything so it stays with the canvas? 
+                    // No, context menus usually shouldn't zoom/pan with canvas? 
+                    // Actually, if we want it to spawn a node at that exact spot, flow position makes sense.
+
+                    const bounds = reactFlowWrapper.current.getBoundingClientRect();
+                    const menuX = clientX - bounds.left;
+                    const menuY = clientY - bounds.top;
+                    const { x: flowX, y: flowY } = screenToFlowPosition({ x: clientX, y: clientY });
+
+                    setContextMenu({
+                        menu: { x: menuX, y: menuY },
+                        flow: { x: flowX, y: flowY },
+                        sourceId: connectionState.fromNode.id,
+                        handleId: connectionState.fromHandle.id
+                    });
+                }
+            }
+        },
+        [screenToFlowPosition]
+    );
+
+    const handleContextSelect = useCallback((type: NodeType) => {
+        if (!contextMenu) return;
+
+        const { flow, sourceId, handleId } = contextMenu;
+
+        // Add new node at the flow position of the drop
+        const newNodeId = addNode(type, flow);
+
+        // Connect source to new node
+        // Source handle is known. Target handle depends on the new node type.
+        // We need to guess the input handle. 
+        // NODE_CONFIG has inputs. We can pick the first one or a specific one?
+        // Or default to 'input' if standard?
+        // Most of our nodes have specific input IDs: 'image_url', 'video_url', 'user_message'.
+        // Let's look up the target handle ID based on the node type configuration.
+
+        // We need to import NODE_CONFIG here or just hardcode for known types.
+        // Let's use a helper or switch.
+        let targetHandleId = 'input'; // default
+
+        switch (type) {
+            case 'llm': targetHandleId = 'user_message'; break; // or system_prompt? user_message is required.
+            case 'cropImage': targetHandleId = 'image_url'; break;
+            case 'extractFrame': targetHandleId = 'video_url'; break;
+            // Text node has no input usually? Or maybe simple input?
+        }
+
+        // We can also use connection validation logic to find a compatible handle?
+        // But for this specific feature we know what we are creating.
+
+        // Create connection
+        onConnect({
+            source: sourceId,
+            sourceHandle: handleId,
+            target: newNodeId,
+            targetHandle: targetHandleId
+        });
+
+        setContextMenu(null);
+    }, [contextMenu, addNode, onConnect]);
+
+    // Close menu on pan/zoom/click pane
+    // We already have handlePaneClick for edge deselection. Let's start with that.
+
     // Handle drag and drop from sidebar
     const handleDragOver = useCallback((event: React.DragEvent) => {
         event.preventDefault();
@@ -241,9 +362,10 @@ function WorkflowCanvasInner() {
         [setSelectedEdgeId]
     );
 
-    // Handle pane click → deselect edge
+    // Handle pane click → deselect edge & close menu
     const handlePaneClick = useCallback(() => {
         setSelectedEdgeId(null);
+        setContextMenu(null);
     }, [setSelectedEdgeId]);
 
     return (
@@ -258,7 +380,10 @@ function WorkflowCanvasInner() {
                 edges={edges}
                 onNodesChange={onNodesChange}
                 onEdgesChange={onEdgesChange}
+
                 onConnect={handleConnect}
+                isValidConnection={isValidConnectionCallback}
+                onConnectEnd={handleConnectEnd}
                 onDragOver={handleDragOver}
                 onDrop={handleDrop}
                 onSelectionChange={handleSelectionChange}
@@ -316,6 +441,16 @@ function WorkflowCanvasInner() {
                 <Panel position="bottom-center">
                     <FloatingToolbar onRun={handleRun} isExecuting={isExecuting} />
                 </Panel>
+
+                {contextMenu && (
+                    <ContextConnectionMenu
+                        position={contextMenu.menu}
+                        sourceNodeId={contextMenu.sourceId}
+                        sourceHandleId={contextMenu.handleId}
+                        onClose={() => setContextMenu(null)}
+                        onSelect={handleContextSelect}
+                    />
+                )}
             </ReactFlow>
         </div>
     );

@@ -49,7 +49,7 @@ export function WorkflowHeader({ workflowId, onRun, onSave }: WorkflowHeaderProp
                 </div>
 
                 {/* Right: Actions */}
-                <div className="flex items-start gap-4 pointer-events-auto">
+                <div className="flex items-start gap-4 pointer-events-auto" style={{ fontFamily: 'var(--font-dm-sans)' }}>
                     {/* Task Manager Panel */}
                     <HistorySidebar
                         workflowId={workflowId}
@@ -58,32 +58,32 @@ export function WorkflowHeader({ workflowId, onRun, onSave }: WorkflowHeaderProp
                     />
 
                     {/* Floating Card for Actions */}
-                    <div className="bg-[#212126] border border-[#1C1C1E] rounded-2xl p-4 shadow-xl flex flex-col gap-3 min-w-[300px]">
+                    <div className="bg-[#212126] border border-[#27272A] rounded-lg px-2 pt-2 pb-2 shadow-lg flex flex-col gap-3 min-w-[220px]">
                         {/* Row 1: Credits, Share */}
-                        <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center justify-between gap-2">
                             {/* Credits Badge */}
-                            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-[#1C1C1E] rounded-lg border border-[#2C2C2E]">
+                            <div className="flex items-center gap-1.5 px-2 py-1 text-gray-200">
                                 <Sparkles className="w-3.5 h-3.5 text-gray-400" />
-                                <span className="text-xs font-medium text-gray-200">149 credits</span>
+                                <span className="text-[12px] font-normal leading-none">149 credits</span>
                             </div>
 
                             {/* Share Button */}
                             <button
                                 onClick={() => setIsShareModalOpen(true)}
-                                className="flex items-center gap-2 px-3 py-1.5 bg-[#E1E476] hover:bg-[#d4d765] text-black rounded-lg transition-colors"
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-[#E1E476] hover:bg-[#d4d765] text-black rounded-lg transition-colors"
                             >
                                 <Share2 className="w-3.5 h-3.5" />
-                                <span className="text-xs font-semibold">Share</span>
+                                <span className="text-[12px] font-normal leading-none">Share</span>
                             </button>
                         </div>
 
                         {/* Row 2: Tasks Dropdown (Open History) */}
-                        <div className="flex items-center">
+                        <div className="flex items-center px-2">
                             <button
                                 onClick={toggleHistory}
-                                className={`flex items-center gap-2 text-gray-400 hover:text-white transition-colors group ${isHistoryOpen ? 'text-white' : ''}`}
+                                className={`flex items-center gap-1 text-gray-400 hover:text-white transition-colors group ${isHistoryOpen ? 'text-white' : ''}`}
                             >
-                                <span className="text-xs font-medium">Tasks</span>
+                                <span className="text-[12px] font-normal leading-none">Tasks</span>
                                 <ChevronDown className={`w-3.5 h-3.5 text-gray-500 group-hover:text-gray-300 transition-colors ${isHistoryOpen ? 'rotate-180' : ''}`} />
                             </button>
                         </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { UserButton, useUser } from '@clerk/nextjs';
@@ -13,8 +13,10 @@ import {
     FileText,
     Search,
     List,
-    Grid3X3
+    Grid3X3,
+    Sparkles
 } from 'lucide-react';
+import { PRODUCT_MARKETING_KIT } from '@/lib/sample-workflows';
 
 // Template workflows for the library
 const WORKFLOW_TEMPLATES = [
@@ -51,9 +53,17 @@ export default function DashboardPage() {
     const [workflows, setWorkflows] = useState<Workflow[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isCreating, setIsCreating] = useState(false);
+    const [isLoadingSample, setIsLoadingSample] = useState(false);
     const [activeTab, setActiveTab] = useState<'library' | 'tutorials'>('library');
     const [searchQuery, setSearchQuery] = useState('');
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+
+    // Context menu state
+    const [contextMenu, setContextMenu] = useState<{ x: number; y: number; workflowId: string } | null>(null);
+    const [renamingId, setRenamingId] = useState<string | null>(null);
+    const [renameValue, setRenameValue] = useState('');
+    const contextMenuRef = useRef<HTMLDivElement>(null);
+    const renameInputRef = useRef<HTMLInputElement>(null);
 
     // Fetch user's workflows
     useEffect(() => {
@@ -92,9 +102,9 @@ export default function DashboardPage() {
             });
 
             if (response.ok) {
-                const workflow = await response.json();
+                const data = await response.json();
                 // Navigate to the new workflow editor
-                router.push(`/workflows/${workflow.id}`);
+                router.push(`/workflows/${data.workflow.id}`);
             } else {
                 console.error('Failed to create workflow');
                 setIsCreating(false);
@@ -102,6 +112,157 @@ export default function DashboardPage() {
         } catch (error) {
             console.error('Failed to create workflow:', error);
             setIsCreating(false);
+        }
+    };
+
+    const handleLoadSample = async () => {
+        if (isLoadingSample) return;
+        setIsLoadingSample(true);
+
+        try {
+            // Create a new workflow with the sample template
+            const response = await fetch('/api/workflows', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: PRODUCT_MARKETING_KIT.name,
+                    description: PRODUCT_MARKETING_KIT.description,
+                    nodes: PRODUCT_MARKETING_KIT.nodes,
+                    edges: PRODUCT_MARKETING_KIT.edges,
+                }),
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                // Navigate to the new workflow with sample template loaded
+                router.push(`/workflows/${data.workflow.id}`);
+            } else {
+                console.error('Failed to create sample workflow');
+                setIsLoadingSample(false);
+            }
+        } catch (error) {
+            console.error('Failed to create sample workflow:', error);
+            setIsLoadingSample(false);
+        }
+    };
+
+    // --- Context Menu Handlers ---
+    const handleContextMenu = useCallback((e: React.MouseEvent, workflowId: string) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setContextMenu({ x: e.clientX, y: e.clientY, workflowId });
+    }, []);
+
+    const closeContextMenu = useCallback(() => {
+        setContextMenu(null);
+    }, []);
+
+    // Close context menu on click outside
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (contextMenuRef.current && !contextMenuRef.current.contains(e.target as Node)) {
+                closeContextMenu();
+            }
+        };
+        if (contextMenu) {
+            document.addEventListener('mousedown', handleClickOutside);
+            return () => document.removeEventListener('mousedown', handleClickOutside);
+        }
+    }, [contextMenu, closeContextMenu]);
+
+    // Focus rename input when entering rename mode
+    useEffect(() => {
+        if (renamingId && renameInputRef.current) {
+            renameInputRef.current.focus();
+            renameInputRef.current.select();
+        }
+    }, [renamingId]);
+
+    const handleOpen = (workflowId: string) => {
+        closeContextMenu();
+        router.push(`/workflows/${workflowId}`);
+    };
+
+    const handleOpenInNewTab = (workflowId: string) => {
+        closeContextMenu();
+        window.open(`/workflows/${workflowId}`, '_blank');
+    };
+
+    const handleDuplicate = async (workflowId: string) => {
+        closeContextMenu();
+        try {
+            const response = await fetch(`/api/workflows/${workflowId}/duplicate`, {
+                method: 'POST',
+            });
+            if (response.ok) {
+                await fetchWorkflows();
+            } else {
+                console.error('Failed to duplicate workflow');
+            }
+        } catch (error) {
+            console.error('Failed to duplicate workflow:', error);
+        }
+    };
+
+    const handleMove = (workflowId: string) => {
+        closeContextMenu();
+        // Placeholder: folders not yet implemented
+        console.log('Move workflow:', workflowId);
+    };
+
+    const handleRenameStart = (workflowId: string) => {
+        closeContextMenu();
+        const workflow = workflows.find(w => w.id === workflowId);
+        if (workflow) {
+            setRenameValue(workflow.name);
+            setRenamingId(workflowId);
+        }
+    };
+
+    const handleRenameSubmit = async (workflowId: string) => {
+        if (!renameValue.trim()) {
+            setRenamingId(null);
+            return;
+        }
+        try {
+            const response = await fetch(`/api/workflows/${workflowId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: renameValue.trim() }),
+            });
+            if (response.ok) {
+                setWorkflows(prev => prev.map(w =>
+                    w.id === workflowId ? { ...w, name: renameValue.trim() } : w
+                ));
+            }
+        } catch (error) {
+            console.error('Failed to rename workflow:', error);
+        } finally {
+            setRenamingId(null);
+        }
+    };
+
+    const handleRenameKeyDown = (e: React.KeyboardEvent, workflowId: string) => {
+        if (e.key === 'Enter') {
+            handleRenameSubmit(workflowId);
+        } else if (e.key === 'Escape') {
+            setRenamingId(null);
+        }
+    };
+
+    const handleDelete = async (workflowId: string) => {
+        closeContextMenu();
+        try {
+            const response = await fetch(`/api/workflows/${workflowId}`, {
+                method: 'DELETE',
+            });
+            if (response.ok) {
+                setWorkflows(prev => prev.filter(w => w.id !== workflowId));
+            } else {
+                console.error('Failed to delete workflow');
+            }
+        } catch (error) {
+            console.error('Failed to delete workflow:', error);
         }
     };
 
@@ -166,6 +327,18 @@ export default function DashboardPage() {
                         <button className="w-full flex items-center gap-3 px-4.5 py-[10px] text-[#666] hover:text-white hover:bg-[#1C1C1E]/50 rounded-md transition-colors select-none">
                             <LayoutGrid className="w-4 h-4" />
                             <span className="text-sm font-medium">Apps</span>
+                        </button>
+
+                        {/* Sample Workflow */}
+                        <button
+                            onClick={handleLoadSample}
+                            disabled={isLoadingSample}
+                            className="w-full flex items-center gap-3 px-4.5 py-[10px] text-[#666] hover:text-white hover:bg-[#1C1C1E]/50 rounded-md transition-colors select-none disabled:opacity-50"
+                        >
+                            <Sparkles className="w-4 h-4" />
+                            <span className="text-sm font-medium">
+                                {isLoadingSample ? 'Loading...' : 'Sample Workflow'}
+                            </span>
                         </button>
                     </nav>
                 </div>
@@ -334,16 +507,16 @@ export default function DashboardPage() {
                             : "flex flex-col gap-2"
                         }>
                             {filteredWorkflows.map((workflow) => (
-                                <Link
+                                <div
                                     key={workflow.id}
-                                    href={`/workflows/${workflow.id}`}
-                                    className="group block"
+                                    className="group block cursor-pointer"
+                                    onClick={() => router.push(`/workflows/${workflow.id}`)}
+                                    onContextMenu={(e) => handleContextMenu(e, workflow.id)}
                                 >
                                     {viewMode === 'grid' ? (
                                         <>
                                             <div className="h-[240px] w-[210px] rounded-lg bg-[#212126] border border-[#323237] group-hover:bg-[#424247] group-hover:border-[#E1E476]/50 transition-colors overflow-hidden relative">
                                                 <div className="w-full h-full flex items-center justify-center">
-                                                    {/* Workflow node icon */}
                                                     <svg width="48" height="48" viewBox="0 0 48 48" fill="none" className="text-gray-600 group-hover:text-gray-400 transition-colors">
                                                         <rect x="8" y="8" width="12" height="12" rx="2" stroke="currentColor" strokeWidth="2" />
                                                         <rect x="28" y="8" width="12" height="12" rx="2" stroke="currentColor" strokeWidth="2" />
@@ -353,9 +526,22 @@ export default function DashboardPage() {
                                                     </svg>
                                                 </div>
                                             </div>
-                                            <div className="mt-1.5 px-2 select-none">
-                                                <p className="text-sm text-gray-200 truncate group-hover:text-[#E1E476] transition-colors">{workflow.name}</p>
-                                                <p className="text-[12px] text-[#A8A8AA] mt-0">
+                                            <div className="mt-1.5 px-2 select-none w-[210px]">
+                                                {renamingId === workflow.id ? (
+                                                    <input
+                                                        ref={renameInputRef}
+                                                        type="text"
+                                                        value={renameValue}
+                                                        onChange={(e) => setRenameValue(e.target.value)}
+                                                        onKeyDown={(e) => handleRenameKeyDown(e, workflow.id)}
+                                                        onBlur={() => handleRenameSubmit(workflow.id)}
+                                                        onClick={(e) => e.stopPropagation()}
+                                                        className="text-sm text-white bg-[#2C2C2E] border border-[#555] rounded px-1.5 py-0.5 w-full outline-none focus:border-[#E1E476]"
+                                                    />
+                                                ) : (
+                                                    <p className="text-sm text-gray-200 group-hover:text-[#E1E476] transition-colors leading-tight">{workflow.name}</p>
+                                                )}
+                                                <p className="text-[12px] text-[#A8A8AA] mt-0.5">
                                                     {formatRelativeTime(workflow.updatedAt)}
                                                 </p>
                                             </div>
@@ -364,19 +550,80 @@ export default function DashboardPage() {
                                         <div className="flex items-center gap-4 p-3 rounded-lg hover:bg-[#1C1C1E] transition-colors select-none">
                                             <FileText className="w-5 h-5 text-gray-500" />
                                             <div className="flex-1 min-w-0">
-                                                <p className="text-sm text-gray-200 truncate group-hover:text-[#E1E476] transition-colors">{workflow.name}</p>
+                                                {renamingId === workflow.id ? (
+                                                    <input
+                                                        ref={renameInputRef}
+                                                        type="text"
+                                                        value={renameValue}
+                                                        onChange={(e) => setRenameValue(e.target.value)}
+                                                        onKeyDown={(e) => handleRenameKeyDown(e, workflow.id)}
+                                                        onBlur={() => handleRenameSubmit(workflow.id)}
+                                                        onClick={(e) => e.stopPropagation()}
+                                                        className="text-sm text-white bg-[#2C2C2E] border border-[#555] rounded px-1.5 py-0.5 w-full outline-none focus:border-[#E1E476]"
+                                                    />
+                                                ) : (
+                                                    <p className="text-sm text-gray-200 truncate group-hover:text-[#E1E476] transition-colors">{workflow.name}</p>
+                                                )}
                                             </div>
                                             <p className="text-xs text-gray-600">
                                                 {formatRelativeTime(workflow.updatedAt)}
                                             </p>
                                         </div>
                                     )}
-                                </Link>
+                                </div>
                             ))}
                         </div>
                     )}
                 </section>
             </main>
+
+            {/* Right-Click Context Menu */}
+            {contextMenu && (
+                <div
+                    ref={contextMenuRef}
+                    className="fixed z-50 min-w-[200px] bg-[#2A2A2E] border border-[#3A3A3E] rounded-lg shadow-2xl shadow-black/50 py-2 select-none"
+                    style={{ left: contextMenu.x, top: contextMenu.y }}
+                >
+                    <button
+                        onClick={() => handleOpen(contextMenu.workflowId)}
+                        className="w-full text-left px-4 py-2.5 text-[14px] text-gray-200 hover:bg-[#3A3A3E] transition-colors"
+                    >
+                        Open
+                    </button>
+                    <button
+                        onClick={() => handleOpenInNewTab(contextMenu.workflowId)}
+                        className="w-full text-left px-4 py-2.5 text-[14px] text-gray-200 hover:bg-[#3A3A3E] transition-colors"
+                    >
+                        Open in a new tab
+                    </button>
+                    <div className="my-1 border-t border-[#3A3A3E]" />
+                    <button
+                        onClick={() => handleDuplicate(contextMenu.workflowId)}
+                        className="w-full text-left px-4 py-2.5 text-[14px] text-gray-200 hover:bg-[#3A3A3E] transition-colors"
+                    >
+                        Duplicate
+                    </button>
+                    <button
+                        onClick={() => handleMove(contextMenu.workflowId)}
+                        className="w-full text-left px-4 py-2.5 text-[14px] text-gray-200 hover:bg-[#3A3A3E] transition-colors"
+                    >
+                        Move
+                    </button>
+                    <button
+                        onClick={() => handleRenameStart(contextMenu.workflowId)}
+                        className="w-full text-left px-4 py-2.5 text-[14px] text-gray-200 hover:bg-[#3A3A3E] transition-colors"
+                    >
+                        Rename
+                    </button>
+                    <div className="my-1 border-t border-[#3A3A3E]" />
+                    <button
+                        onClick={() => handleDelete(contextMenu.workflowId)}
+                        className="w-full text-left px-4 py-2.5 text-[14px] text-red-400 hover:bg-[#3A3A3E] transition-colors"
+                    >
+                        Delete
+                    </button>
+                </div>
+            )}
         </div>
     );
 }
