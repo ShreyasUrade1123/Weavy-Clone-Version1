@@ -1,5 +1,5 @@
 {
-  "configPath": "C:\\Users\\SHREYAS URADE\\Desktop\\Project Folder\\Galaxy.ai\\weavy-clone\\.trigger\\tmp\\build-wsaIjg\\trigger.config.mjs",
+  "configPath": "C:\\Users\\SHREYAS URADE\\Desktop\\Project Folder\\Galaxy.ai\\weavy-clone\\.trigger\\tmp\\build-TrEPp9\\trigger.config.mjs",
   "customConditions": [
   ],
   "queues": [
@@ -8,7 +8,7 @@
   "runtimeVersion": "22.18.0",
   "tasks": [
     {
-      "entryPoint": "C:\\Users\\SHREYAS URADE\\Desktop\\Project Folder\\Galaxy.ai\\weavy-clone\\.trigger\\tmp\\build-wsaIjg\\src\\trigger\\index.mjs",
+      "entryPoint": "C:\\Users\\SHREYAS URADE\\Desktop\\Project Folder\\Galaxy.ai\\weavy-clone\\.trigger\\tmp\\build-TrEPp9\\src\\trigger\\index.mjs",
       "filePath": "src/trigger/index.ts",
       "id": "llm-execution",
       "maxDuration": 300,
@@ -21,7 +21,7 @@
       }
     },
     {
-      "entryPoint": "C:\\Users\\SHREYAS URADE\\Desktop\\Project Folder\\Galaxy.ai\\weavy-clone\\.trigger\\tmp\\build-wsaIjg\\src\\trigger\\index.mjs",
+      "entryPoint": "C:\\Users\\SHREYAS URADE\\Desktop\\Project Folder\\Galaxy.ai\\weavy-clone\\.trigger\\tmp\\build-TrEPp9\\src\\trigger\\index.mjs",
       "filePath": "src/trigger/index.ts",
       "id": "crop-image",
       "maxDuration": 300,
@@ -34,13 +34,13 @@
       }
     },
     {
-      "entryPoint": "C:\\Users\\SHREYAS URADE\\Desktop\\Project Folder\\Galaxy.ai\\weavy-clone\\.trigger\\tmp\\build-wsaIjg\\src\\trigger\\index.mjs",
+      "entryPoint": "C:\\Users\\SHREYAS URADE\\Desktop\\Project Folder\\Galaxy.ai\\weavy-clone\\.trigger\\tmp\\build-TrEPp9\\src\\trigger\\index.mjs",
       "filePath": "src/trigger/index.ts",
       "id": "extract-frame",
       "maxDuration": 300,
       "retry": {
         "factor": 2,
-        "maxAttempts": 1,
+        "maxAttempts": 2,
         "maxTimeoutInMs": 60000,
         "minTimeoutInMs": 1000,
         "randomize": true
@@ -48,7 +48,7 @@
     }
   ],
   "timings": {
-    "src/trigger/index.ts": 39.67520000000002
+    "src/trigger/index.ts": 2.1814999999999998
   },
-  "workerEntryPoint": "C:\\Users\\SHREYAS URADE\\Desktop\\Project Folder\\Galaxy.ai\\weavy-clone\\.trigger\\tmp\\build-wsaIjg\\node_modules\\trigger.dev\\dist\\esm\\entryPoints\\dev-run-worker.mjs"
+  "workerEntryPoint": "C:\\Users\\SHREYAS URADE\\Desktop\\Project Folder\\Galaxy.ai\\weavy-clone\\.trigger\\tmp\\build-TrEPp9\\node_modules\\trigger.dev\\dist\\esm\\entryPoints\\dev-run-worker.mjs"
 }

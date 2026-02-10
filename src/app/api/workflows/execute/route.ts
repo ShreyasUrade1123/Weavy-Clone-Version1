@@ -45,7 +45,25 @@ export async function POST(request: NextRequest) {
         // Determine which nodes to execute
         let nodesToExecute: Node[] = nodes;
         if (scope !== 'FULL' && nodeIds && nodeIds.length > 0) {
-            nodesToExecute = nodes.filter((n: Node) => nodeIds.includes(n.id));
+            // For SINGLE scope, include all upstream dependencies
+            // so processing nodes (crop, extract frame) execute before the target node
+            const allNodeIds = new Set<string>(nodeIds);
+
+            if (scope === 'SINGLE') {
+                // BFS backwards through edges to find all upstream dependencies
+                const queue = [...nodeIds];
+                while (queue.length > 0) {
+                    const currentId = queue.shift()!;
+                    edges.forEach((edge: Edge) => {
+                        if (edge.target === currentId && !allNodeIds.has(edge.source)) {
+                            allNodeIds.add(edge.source);
+                            queue.push(edge.source);
+                        }
+                    });
+                }
+            }
+
+            nodesToExecute = nodes.filter((n: Node) => allNodeIds.has(n.id));
         }
 
         // Create workflow run record
@@ -309,14 +327,41 @@ async function executeCropImageViaTrigger(
         throw new Error('Image URL is required');
     }
 
+    // Check for blob: URLs - Transloadit cannot access browser-only URLs
+    if (imageUrl.startsWith('blob:')) {
+        console.warn('[Crop] blob: URL detected, returning original');
+        return imageUrl;
+    }
+
+    // Compute actual pixel crop coordinates from the node's dimension data
+    const data = node.data as {
+        sourceWidth?: number;
+        sourceHeight?: number;
+        outputWidth?: number;
+        outputHeight?: number;
+        xPercent?: number;
+        yPercent?: number;
+        widthPercent?: number;
+        heightPercent?: number;
+    };
+
+    const sourceW = data.sourceWidth || 1024;
+    const sourceH = data.sourceHeight || 1024;
+    const cropW = data.outputWidth || sourceW;
+    const cropH = data.outputHeight || sourceH;
+
+    // Center the crop within the source image
+    const x = Math.max(0, Math.round((sourceW - cropW) / 2));
+    const y = Math.max(0, Math.round((sourceH - cropH) / 2));
+
+    console.log(`[Crop] Source: ${sourceW}x${sourceH}, Crop: ${cropW}x${cropH}, Offset: (${x}, ${y})`);
+
     const payload = {
         imageUrl,
-        x: Number(inputs['x_percent'] ?? (node.data as { xPercent?: number })?.xPercent ?? 0),
-        y: Number(inputs['y_percent'] ?? (node.data as { yPercent?: number })?.yPercent ?? 0),
-        width: Number(inputs['width_percent'] ?? (node.data as { widthPercent?: number })?.widthPercent ?? 100),
-        height: Number(inputs['height_percent'] ?? (node.data as { heightPercent?: number })?.heightPercent ?? 100),
-        nodeId: node.id,
-        runId,
+        x,
+        y,
+        width: Math.min(cropW, sourceW),
+        height: Math.min(cropH, sourceH),
     };
 
     try {
@@ -326,7 +371,7 @@ async function executeCropImageViaTrigger(
         const completed = await runs.poll(handle.id, { pollIntervalMs: 500 });
 
         if (completed.status === 'COMPLETED') {
-            return (completed.output as any)?.imageUrl || (completed.output as any)?.croppedUrl || '';
+            return (completed.output as any)?.imageUrl || '';
         } else {
             throw new Error(`Crop image task failed with status: ${completed.status}`);
         }
@@ -364,8 +409,6 @@ async function executeExtractFrameViaTrigger(
     const payload = {
         videoUrl,
         timestamp: timestampSeconds,
-        nodeId: node.id,
-        runId,
     };
 
     try {

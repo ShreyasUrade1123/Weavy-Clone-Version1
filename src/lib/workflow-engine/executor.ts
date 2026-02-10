@@ -2,7 +2,7 @@ import { Node, Edge } from '@xyflow/react';
 import { WorkflowNodeData, NodeType } from '@/types/nodes';
 import { topologicalSort, getConnectedInputs } from './validation';
 import prisma from '@/lib/db';
-import { tasks } from "@trigger.dev/sdk/v3";
+import { tasks, runs } from "@trigger.dev/sdk/v3";
 import type { llmTask, cropImageTask, extractFrameTask } from "@/trigger";
 
 export type ExecutionScope = 'FULL' | 'PARTIAL' | 'SINGLE';
@@ -384,34 +384,41 @@ export class WorkflowExecutor {
         runId: string
     ): Promise<string> {
         const data = node.data as {
-            xPercent?: number;
-            yPercent?: number;
-            widthPercent?: number;
-            heightPercent?: number;
+            sourceWidth?: number;
+            sourceHeight?: number;
+            outputWidth?: number;
+            outputHeight?: number;
         };
 
-        const imageData = (inputs['image_url'] as string) || '';
-        if (!imageData) {
+        const imageUrl = (inputs['image_url'] as string) || '';
+        if (!imageUrl) {
             throw new Error('Image URL is required');
         }
 
+        // Compute actual pixel crop coordinates
+        const sourceW = data.sourceWidth || 1024;
+        const sourceH = data.sourceHeight || 1024;
+        const cropW = data.outputWidth || sourceW;
+        const cropH = data.outputHeight || sourceH;
+        const x = Math.max(0, Math.round((sourceW - cropW) / 2));
+        const y = Math.max(0, Math.round((sourceH - cropH) / 2));
+
         const payload = {
-            imageData,
-            crop: {
-                x: (inputs['x_percent'] as number) ?? data.xPercent ?? 0,
-                y: (inputs['y_percent'] as number) ?? data.yPercent ?? 0,
-                width: (inputs['width_percent'] as number) ?? data.widthPercent ?? 100,
-                height: (inputs['height_percent'] as number) ?? data.heightPercent ?? 100,
-            },
+            imageUrl,
+            x,
+            y,
+            width: Math.min(cropW, sourceW),
+            height: Math.min(cropH, sourceH),
         };
 
-        const result = await tasks.triggerAndWait<typeof cropImageTask>("crop-image", payload);
+        const handle = await tasks.trigger<typeof cropImageTask>("crop-image", payload);
+        const completed = await runs.poll(handle.id, { pollIntervalMs: 500 });
 
-        if (!result.ok) {
-            throw new Error('Crop image failed');
+        if (completed.status !== 'COMPLETED') {
+            throw new Error(`Crop image failed with status: ${completed.status}`);
         }
 
-        return result.output.imageUrl;
+        return (completed.output as any).imageUrl;
     }
 
     /**
@@ -434,16 +441,13 @@ export class WorkflowExecutor {
             timestamp: parseFloat((inputs['timestamp'] as string) ?? data.timestamp ?? '0'),
         };
 
-        const result = await tasks.triggerAndWait<typeof extractFrameTask>("extract-frame", payload);
+        const handle = await tasks.trigger<typeof extractFrameTask>("extract-frame", payload);
+        const completed = await runs.poll(handle.id, { pollIntervalMs: 500 });
 
-        // Note: extractFrameTask currently throws since it requires FFmpeg.
-        // When implemented, the output shape should match the task definition.
-        if (!result.ok) {
-            throw new Error('Extract frame failed');
+        if (completed.status !== 'COMPLETED') {
+            throw new Error(`Extract frame failed with status: ${completed.status}`);
         }
 
-        // The task currently throws, so this won't be reached until FFmpeg is configured.
-        // Casting to any since the task doesn't define a return type for success yet.
-        return (result.output as any).frameUrl;
+        return (completed.output as any).frameUrl;
     }
 }
