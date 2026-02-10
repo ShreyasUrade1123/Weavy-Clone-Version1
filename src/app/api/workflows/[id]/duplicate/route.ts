@@ -41,8 +41,8 @@ export async function POST(
             data: {
                 name: `${original.name} (Copy)`,
                 description: original.description,
-                nodes: original.nodes,
-                edges: original.edges,
+                nodes: original.nodes ?? [],
+                edges: original.edges ?? [],
                 userId: user.id,
             },
         });
