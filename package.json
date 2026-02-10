@@ -7,11 +7,13 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "trigger:dev": "trigger-cli dev"
+    "trigger:dev": "trigger-cli dev",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@clerk/nextjs": "^6.37.0",
     "@google/generative-ai": "^0.24.1",
+    "@prisma/client": "^6.19.2",
     "@trigger.dev/sdk": "4.3.3",
     "@xyflow/react": "^12.10.0",
     "dotenv": "^17.2.3",
@@ -30,7 +32,6 @@
     "zustand": "^5.0.10"
   },
   "devDependencies": {
-    "@prisma/client": "^6.19.2",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
