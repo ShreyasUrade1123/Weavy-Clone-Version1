@@ -25,6 +25,8 @@ export default function WorkflowEditorPage() {
     const setWorkflow = useWorkflowStore((state) => state.setWorkflow);
     const setNodeStatus = useWorkflowStore((state) => state.setNodeStatus);
     const updateNodeData = useWorkflowStore((state) => state.updateNodeData);
+    const loadWorkflow = useWorkflowStore((state) => state.loadWorkflow);
+    const saveWorkflow = useWorkflowStore((state) => state.saveWorkflow);
 
     // Local state for the canvas name input
     const [localName, setLocalName] = useState(workflowName);
@@ -59,14 +61,10 @@ export default function WorkflowEditorPage() {
 
     // Load workflow if editing existing
     useEffect(() => {
-        const loadWorkflow = async () => {
+        const load = async () => {
             if (workflowId && workflowId !== 'new') {
                 try {
-                    const response = await fetch(`/api/workflows/${workflowId}`);
-                    if (response.ok) {
-                        const data = await response.json();
-                        setWorkflow(data.id, data.name, data.nodes || [], data.edges || []);
-                    }
+                    await loadWorkflow(workflowId);
                 } catch (error) {
                     console.error('Failed to load workflow:', error);
                 }
@@ -74,37 +72,28 @@ export default function WorkflowEditorPage() {
             setIsLoaded(true);
         };
 
-        loadWorkflow();
-    }, [workflowId, setWorkflow]);
+        load();
+    }, [workflowId, loadWorkflow]);
 
     // Handle workflow save
     const handleSave = useCallback(async () => {
-        const method = workflowId && workflowId !== 'new' ? 'PUT' : 'POST';
-        const url = workflowId && workflowId !== 'new'
-            ? `/api/workflows/${workflowId}`
-            : '/api/workflows';
-
-        const response = await fetch(url, {
-            method,
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                name: useWorkflowStore.getState().workflowName,
-                nodes,
-                edges,
-            }),
-        });
-
-        if (!response.ok) {
-            throw new Error('Failed to save workflow');
+        try {
+            await saveWorkflow();
+        } catch (error) {
+            console.error('Failed to save workflow:', error);
         }
+    }, [saveWorkflow]);
 
-        const data = await response.json();
+    // Auto-save on changes
+    useEffect(() => {
+        if (!isLoaded) return; // Don't auto-save during initial load
 
-        // Update URL if new workflow was created
-        if (!workflowId || workflowId === 'new') {
-            window.history.replaceState({}, '', `/workflows/${data.id}`);
-        }
-    }, [workflowId, nodes, edges]);
+        const timer = setTimeout(() => {
+            saveWorkflow().catch(console.error);
+        }, 2000); // Debounce 2 seconds
+
+        return () => clearTimeout(timer);
+    }, [nodes, edges, workflowName, isLoaded, saveWorkflow]);
 
     // Handle workflow run
     const handleRun = useCallback(async (scope: 'full' | 'selected' | 'single') => {

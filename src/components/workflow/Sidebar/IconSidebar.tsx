@@ -14,6 +14,7 @@ import {
 import Link from 'next/link';
 import Image from 'next/image';
 import { UserButton } from '@clerk/nextjs';
+import { LogoMenu } from '../LogoMenu';
 
 interface IconSidebarProps {
     activeSection: string | null;
@@ -33,13 +34,10 @@ export default function IconSidebar({ activeSection, onSectionClick }: IconSideb
 
     return (
         <div className="w-[57px] bg-[#212126] flex flex-col items-center py-[18px] z-30">
-            {/* Logo / Home */}
-            <Link
-                href="/dashboard"
-                className="w-8 h-8 flex items-center justify-center hover:opacity-90 transition-opacity mb-[33px]"
-            >
-                <Image src="/logo.svg" alt="Galaxy.ai" width={32} height={32} className="w-6 h-6" />
-            </Link>
+            {/* Logo Menu */}
+            <div className="mb-[33px]">
+                <LogoMenu />
+            </div>
 
             {/* Navigation Icons */}
             <div className="flex flex-col gap-[9px]">

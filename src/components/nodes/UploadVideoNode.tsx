@@ -1,7 +1,7 @@
 'use client';
 
 import { memo, useCallback, useState } from 'react';
-import { Handle, Position, NodeProps, useReactFlow } from '@xyflow/react';
+import { Handle, Position, NodeProps, useReactFlow, useHandleConnections } from '@xyflow/react';
 import { Upload, X, MoreHorizontal, Loader2 } from 'lucide-react';
 import { UploadVideoNodeData } from '@/types/nodes';
 import { useWorkflowStore } from '@/stores/workflow-store';
@@ -13,6 +13,13 @@ function UploadVideoNodeComponent({ id, data, selected }: NodeProps) {
     const nodeData = data as UploadVideoNodeData;
     const { updateNodeData, deleteNode } = useWorkflowStore();
     const { getNode } = useReactFlow();
+
+    // Check connectivity for the output handle
+    const connections = useHandleConnections({
+        type: 'source',
+        id: 'output',
+    });
+    const isConnected = connections.length > 0;
 
     // Derived state
     const isExecuting = nodeData.status === 'running';
@@ -109,10 +116,11 @@ function UploadVideoNodeComponent({ id, data, selected }: NodeProps) {
         <>
             <div
                 className={`
-                    group relative rounded-xl min-w-[460px] shadow-2xl transition-all duration-200
+                    group relative rounded-xl shadow-2xl transition-all duration-200
                     ${selected ? 'bg-[#2B2B2F] ring-2 ring-inset ring-[#333337]' : 'bg-[#212126]'}
                     ${isExecuting ? 'ring-2 ring-[#C084FC]/50' : ''}
                     ${nodeData.status === 'error' ? 'ring-2 ring-red-500' : ''}
+                    ${nodeData.videoUrl ? 'min-w-[300px] max-w-[600px] w-fit' : 'min-w-[460px] w-[460px]'}
                 `}
             >
                 {/* Header */}
@@ -142,10 +150,12 @@ function UploadVideoNodeComponent({ id, data, selected }: NodeProps) {
 
                 {/* Content */}
                 <div className="px-4.5 pb-4.5">
-                    {/* Dropzone Container */}
-                    <div className="relative w-full aspect-square rounded-xl overflow-hidden mb-3 bg-[#1A1A1D]">
-
-                        {/* Checkerboard Pattern */}
+                    {/* Dropzone / Video Container */}
+                    <div className={`
+                        relative rounded-xl overflow-hidden mb-3 bg-[#1A1A1D]
+                        ${nodeData.videoUrl ? 'w-auto h-auto' : 'w-full aspect-square'}
+                    `}>
+                        {/* Checkerboard Pattern (only when empty) */}
                         {!nodeData.videoUrl && !isUploading && (
                             <div
                                 className="absolute inset-0 opacity-20 pointer-events-none"
@@ -169,11 +179,12 @@ function UploadVideoNodeComponent({ id, data, selected }: NodeProps) {
                                 <p className="text-sm text-gray-400">Uploading...</p>
                             </div>
                         ) : nodeData.videoUrl ? (
-                            <div className="relative w-full h-full group/video bg-black flex items-center justify-center">
+                            <div className="relative group/video bg-black flex items-center justify-center min-h-[200px]">
                                 <video
                                     src={nodeData.videoUrl}
                                     controls
-                                    className="max-w-full max-h-full"
+                                    className="block max-h-[600px] w-auto h-auto object-contain"
+                                    preload="metadata"
                                 />
                                 {!nodeData.isLocked && (
                                     <div className="absolute top-2 right-2 opacity-0 group-hover/video:opacity-100 transition-opacity z-10">
@@ -235,9 +246,12 @@ function UploadVideoNodeComponent({ id, data, selected }: NodeProps) {
                             type="source"
                             position={Position.Right}
                             id="output"
-                            // Neutral white border to match screenshot style
-                            className={`!w-4 !h-4 !bg-[#2B2B2F] !border-[3.3px] !border-white transition-transform duration-200 hover:scale-110 flex items-center justify-center`}
-                        />
+                            className={`!w-4 !h-4 !bg-[#2B2B2F] !border-[3.3px] !border-[#EF9192] transition-transform duration-200 hover:scale-110 flex items-center justify-center`}
+                        >
+                            {isConnected && (
+                                <div className="w-1.5 h-1.5 bg-[#EF9192] rounded-full" />
+                            )}
+                        </Handle>
                     </div>
                     <div className={`
                         absolute left-full top-[0px] -translate-y-1/2 ml-2
@@ -245,7 +259,7 @@ function UploadVideoNodeComponent({ id, data, selected }: NodeProps) {
                         transition-opacity duration-200
                         ${selected || 'group-hover:opacity-100 opacity-0'}
                     `}>
-                        <span className="text-white font-medium text-[14px] whitespace-nowrap" style={{ fontFamily: 'var(--font-dm-mono)' }}>
+                        <span className="text-[#EF9192] font-medium text-[14px] whitespace-nowrap" style={{ fontFamily: 'var(--font-dm-mono)' }}>
                             File
                         </span>
                     </div>

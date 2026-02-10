@@ -1,7 +1,7 @@
 'use client';
 
 import { memo, useCallback, useState } from 'react';
-import { Handle, Position, NodeProps, useReactFlow } from '@xyflow/react';
+import { Handle, Position, NodeProps, useReactFlow, useHandleConnections } from '@xyflow/react';
 import { Upload, X, MoreHorizontal, Loader2 } from 'lucide-react';
 import { UploadImageNodeData } from '@/types/nodes';
 import { useWorkflowStore } from '@/stores/workflow-store';
@@ -13,6 +13,13 @@ function UploadImageNodeComponent({ id, data, selected }: NodeProps) {
     const nodeData = data as UploadImageNodeData;
     const { updateNodeData, deleteNode } = useWorkflowStore();
     const { getNode } = useReactFlow();
+
+    // Check connectivity for the output handle
+    const connections = useHandleConnections({
+        type: 'source',
+        id: 'output',
+    });
+    const isConnected = connections.length > 0;
 
     // Derived state
     const isExecuting = nodeData.status === 'running';
@@ -239,9 +246,12 @@ function UploadImageNodeComponent({ id, data, selected }: NodeProps) {
                             type="source"
                             position={Position.Right}
                             id="output"
-                            // Neutral white border to match screenshot style for generic file
-                            className={`!w-4 !h-4 !bg-[#2B2B2F] !border-[3.3px] !border-white transition-transform duration-200 hover:scale-110 flex items-center justify-center`}
-                        />
+                            className={`!w-4 !h-4 !bg-[#2B2B2F] !border-[3.3px] !border-[#6FDDB3] transition-transform duration-200 hover:scale-110 flex items-center justify-center`}
+                        >
+                            {isConnected && (
+                                <div className="w-1.5 h-1.5 bg-[#6FDDB3] rounded-full" />
+                            )}
+                        </Handle>
                     </div>
                     <div className={`
                         absolute left-full top-[0px] -translate-y-1/2 ml-2
@@ -249,7 +259,7 @@ function UploadImageNodeComponent({ id, data, selected }: NodeProps) {
                         transition-opacity duration-200
                         ${selected || 'group-hover:opacity-100 opacity-0'}
                     `}>
-                        <span className="text-white font-medium text-[14px] whitespace-nowrap" style={{ fontFamily: 'var(--font-dm-mono)' }}>
+                        <span className="text-[#6FDDB3] font-medium text-[14px] whitespace-nowrap" style={{ fontFamily: 'var(--font-dm-mono)' }}>
                             File
                         </span>
                     </div>

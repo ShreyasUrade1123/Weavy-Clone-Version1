@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
             },
         });
 
-        return NextResponse.json(workflow, { status: 201 });
+        return NextResponse.json({ workflow }, { status: 201 });
     } catch (error) {
         console.error('Failed to create workflow:', error);
         return NextResponse.json(

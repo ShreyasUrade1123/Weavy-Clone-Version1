@@ -138,10 +138,10 @@ function TextNodeComponent({ id, data, selected }: NodeProps) {
                             type="source"
                             position={Position.Right}
                             id="output"
-                            className={`!w-4 !h-4 !bg-[#2B2B2F] !border-[3.3px] !border-[#F1A0FA] transition-transform duration-200 hover:scale-100 flex items-center justify-center`}
+                            className={`!w-4 !h-4 !bg-[#2B2B2F] !border-[3.3px] !border-[#F2A0FB] transition-transform duration-200 hover:scale-100 flex items-center justify-center`}
                         >
                             {isConnected && (
-                                <div className="w-1.5 h-1.5 bg-[#F1A0FA] rounded-full" />
+                                <div className="w-1.5 h-1.5 bg-[#F2A0FB] rounded-full" />
                             )}
                         </Handle>
                     </div>
@@ -152,7 +152,7 @@ function TextNodeComponent({ id, data, selected }: NodeProps) {
                         transition-opacity duration-200
                         ${selected || 'group-hover:opacity-100 opacity-0'}
                     `}>
-                        <span className="text-[#F1A0FA] font-medium text-[14px] whitespace-nowrap" style={{ fontFamily: 'var(--font-dm-mono)' }}>
+                        <span className="text-[#F2A0FB] font-medium text-[14px] whitespace-nowrap" style={{ fontFamily: 'var(--font-dm-mono)' }}>
                             {nodeData.label || 'Prompt'}
                         </span>
                     </div>

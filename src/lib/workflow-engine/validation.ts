@@ -47,6 +47,17 @@ export function isValidConnection(
         };
     }
 
+    // Specific validation for ExtractFrame node
+    // Only allow connection from UploadVideo node
+    if (targetType === 'extractFrame' && targetHandle === 'video_url') {
+        if (sourceType !== 'uploadVideo') {
+            return {
+                valid: false,
+                reason: 'Extract Frame node only accepts input from Upload Video node'
+            };
+        }
+    }
+
     // Check if target input already has a connection (single input only for most handles)
     const existingConnection = edges.find(
         e => e.target === targetNode.id && e.targetHandle === targetHandle

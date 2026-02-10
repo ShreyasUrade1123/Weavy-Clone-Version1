@@ -1,7 +1,7 @@
 'use client';
 
 import { memo, useState, useEffect, useMemo } from 'react';
-import { Handle, Position, NodeProps, useReactFlow } from '@xyflow/react';
+import { Handle, Position, NodeProps, useReactFlow, useHandleConnections } from '@xyflow/react';
 import { MoreHorizontal, Link as LinkIcon, ChevronDown, Asterisk } from 'lucide-react';
 import { CropImageNodeData, UploadImageNodeData } from '@/types/nodes';
 import { useWorkflowStore } from '@/stores/workflow-store';
@@ -58,6 +58,12 @@ function CropImageNodeComponent({ id, data, selected }: NodeProps) {
     const nodeData = data as CropImageNodeData;
     const { updateNodeData, deleteNode, edges } = useWorkflowStore();
     const { getNode } = useReactFlow();
+
+    // Check connectivity for handles
+    const inputConnections = useHandleConnections({ type: 'target', id: 'image_url' });
+    const outputConnections = useHandleConnections({ type: 'source', id: 'output' });
+    const isInputConnected = inputConnections.length > 0;
+    const isOutputConnected = outputConnections.length > 0;
 
     // UI State
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -198,13 +204,20 @@ function CropImageNodeComponent({ id, data, selected }: NodeProps) {
                                 type="target"
                                 position={Position.Left}
                                 id="image_url"
-                                className={`!w-4 !h-4 !bg-transparent !border-0 transition-transform duration-200 hover:scale-100 flex items-center justify-center`}
+                                className={`!w-4 !h-4 transition-transform duration-200 ${isInputConnected
+                                    ? '!bg-[#2B2B2F] !border-[3.3px] !border-[#6FDDB3] hover:scale-110'
+                                    : '!bg-transparent !border-0 hover:scale-100'
+                                    } flex items-center justify-center`}
                             >
-                                <div className="w-6 h-6 rounded-full bg-[#2B2B2F] flex items-center justify-center border-[3.3px] border-[#2B2B2F]">
-                                    <div className="w-4 h-4 rounded-full bg-[#FFFFF0] flex items-center justify-center">
-                                        <Asterisk className="w-6 h-6 text-[#1C1C1E]" strokeWidth={3.5} />
+                                {isInputConnected ? (
+                                    <div className="w-1.5 h-1.5 bg-[#6FDDB3] rounded-full" />
+                                ) : (
+                                    <div className="w-6 h-6 rounded-full bg-[#2B2B2F] flex items-center justify-center border-[3.3px] border-[#2B2B2F]">
+                                        <div className="w-4 h-4 rounded-full bg-[#FFFFF0] flex items-center justify-center">
+                                            <Asterisk className="w-6 h-6 text-[#1C1C1E]" strokeWidth={3.5} />
+                                        </div>
                                     </div>
-                                </div>
+                                )}
                             </Handle>
                         </div>
 
@@ -215,8 +228,8 @@ function CropImageNodeComponent({ id, data, selected }: NodeProps) {
                             transition-opacity duration-200
                             ${selected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}
                         `}>
-                            <span className="text-white font-medium text-[14px] whitespace-nowrap" style={{ fontFamily: 'var(--font-dm-mono)' }}>
-                                File<span className="text-[#E1E476]">*</span>
+                            <span className={`${isInputConnected ? 'text-[#6FDDB3]' : 'text-white'} font-medium text-[14px] whitespace-nowrap`} style={{ fontFamily: 'var(--font-dm-mono)' }}>
+                                File{isInputConnected ? '' : <span className="text-[#E1E476]">*</span>}
                             </span>
                         </div>
                     </div>
@@ -236,8 +249,15 @@ function CropImageNodeComponent({ id, data, selected }: NodeProps) {
                                 type="source"
                                 position={Position.Right}
                                 id="output"
-                                className={`!w-4 !h-4 !bg-[#2B2B2F] !border-[3.3px] !border-white transition-transform duration-200 hover:scale-110 flex items-center justify-center`}
-                            />
+                                className={`!w-4 !h-4 !bg-[#2B2B2F] !border-[3.3px] transition-transform duration-200 ${isOutputConnected
+                                    ? '!border-[#6FDDB3] hover:scale-110'
+                                    : '!border-white hover:scale-110'
+                                    } flex items-center justify-center`}
+                            >
+                                {isOutputConnected && (
+                                    <div className="w-1.5 h-1.5 bg-[#6FDDB3] rounded-full" />
+                                )}
+                            </Handle>
                         </div>
 
                         {/* Label */}
@@ -247,7 +267,7 @@ function CropImageNodeComponent({ id, data, selected }: NodeProps) {
                             transition-opacity duration-200
                             ${selected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}
                         `}>
-                            <span className="text-white font-medium text-[14px] whitespace-nowrap" style={{ fontFamily: 'var(--font-dm-mono)' }}>
+                            <span className={`${isOutputConnected ? 'text-[#6FDDB3]' : 'text-white'} font-medium text-[14px] whitespace-nowrap`} style={{ fontFamily: 'var(--font-dm-mono)' }}>
                                 File
                             </span>
                         </div>

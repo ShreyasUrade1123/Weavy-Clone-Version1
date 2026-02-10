@@ -71,6 +71,8 @@ export interface ExtractFrameNodeData extends BaseNodeData {
   videoUrl?: string;
   timestamp: string; // seconds or "50%" for percentage
   frameUrl?: string;
+  frame?: number;
+  timecode?: string;
 }
 
 // Union type for all node data
@@ -152,7 +154,6 @@ export const NODE_CONFIG: Record<NodeType, NodeConfig> = {
     icon: 'Film',
     inputs: [
       { id: 'video_url', type: 'video', label: 'Video', required: true },
-      { id: 'timestamp', type: 'text', label: 'Timestamp' },
     ],
     outputs: [{ id: 'output', type: 'image', label: 'Frame Image' }],
   },

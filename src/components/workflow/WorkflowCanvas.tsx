@@ -12,10 +12,12 @@ import {
     useReactFlow,
     Panel,
     SelectionMode,
+    Edge,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
 import { nodeTypes } from '@/components/nodes';
+import { edgeTypes, CustomConnectionLine } from '@/components/edges';
 import { useWorkflowStore } from '@/stores/workflow-store';
 import { useCanvasToolStore } from '@/stores/canvas-tool-store';
 import { isValidConnection as validateConnection } from '@/lib/workflow-engine/validation';
@@ -41,6 +43,9 @@ function WorkflowCanvasInner() {
     const deleteNode = useWorkflowStore((state) => state.deleteNode);
     const setSelectedNodeIds = useWorkflowStore((state) => state.setSelectedNodeIds);
     const selectedNodeIds = useWorkflowStore((state) => state.selectedNodeIds);
+    const selectedEdgeId = useWorkflowStore((state) => state.selectedEdgeId);
+    const setSelectedEdgeId = useWorkflowStore((state) => state.setSelectedEdgeId);
+    const deleteEdge = useWorkflowStore((state) => state.deleteEdge);
     const undo = useWorkflowStore((state) => state.undo);
     const redo = useWorkflowStore((state) => state.redo);
     const updateNodeData = useWorkflowStore((state) => state.updateNodeData);
@@ -186,8 +191,15 @@ function WorkflowCanvasInner() {
     // Handle keyboard shortcuts
     const handleKeyDown = useCallback(
         (event: React.KeyboardEvent) => {
-            // Delete nodes
+            // Delete nodes or selected edge
             if (event.key === 'Delete' || event.key === 'Backspace') {
+                // Delete selected edge first
+                if (selectedEdgeId) {
+                    deleteEdge(selectedEdgeId);
+                    setSelectedEdgeId(null);
+                    return;
+                }
+                // Then delete selected nodes
                 const selectedNodes = nodes.filter(n => n.selected);
                 selectedNodes.forEach(node => deleteNode(node.id));
             }
@@ -210,7 +222,7 @@ function WorkflowCanvasInner() {
                 redo();
             }
         },
-        [nodes, deleteNode, handleRun, undo, redo]
+        [nodes, deleteNode, handleRun, undo, redo, selectedEdgeId, deleteEdge, setSelectedEdgeId]
     );
 
     // Handle selection change
@@ -220,6 +232,19 @@ function WorkflowCanvasInner() {
         },
         [setSelectedNodeIds]
     );
+
+    // Handle edge click → select edge
+    const handleEdgeClick = useCallback(
+        (_event: React.MouseEvent, edge: Edge) => {
+            setSelectedEdgeId(edge.id);
+        },
+        [setSelectedEdgeId]
+    );
+
+    // Handle pane click → deselect edge
+    const handlePaneClick = useCallback(() => {
+        setSelectedEdgeId(null);
+    }, [setSelectedEdgeId]);
 
     return (
         <div
@@ -237,20 +262,25 @@ function WorkflowCanvasInner() {
                 onDragOver={handleDragOver}
                 onDrop={handleDrop}
                 onSelectionChange={handleSelectionChange}
+                onEdgeClick={handleEdgeClick}
+                onPaneClick={handlePaneClick}
                 nodeTypes={nodeTypes}
+                edgeTypes={edgeTypes}
+                connectionLineComponent={CustomConnectionLine}
                 fitView
                 snapToGrid
                 snapGrid={[16, 16]}
                 minZoom={0.1}
                 maxZoom={4}
                 defaultEdgeOptions={{
+                    type: 'default',
                     animated: false,
-                    style: { stroke: '#F1A0FA', strokeWidth: 4 },
-                    markerEnd: 'dot',
                 }}
-                connectionLineStyle={{ stroke: '#F1A0FA', strokeWidth: 4 }}
                 proOptions={{ hideAttribution: true }}
-                className="bg-gray-950"
+                className={`bg-gray-950 ${activeTool === 'select'
+                    ? '[&_.react-flow__pane]:!cursor-default'
+                    : ''
+                    }`}
                 // Interaction props based on active tool
                 {...interactionProps}
                 // Always enabled regardless of tool
@@ -262,21 +292,6 @@ function WorkflowCanvasInner() {
                 // Selection box styling
                 selectionKeyCode={null}    // No key required for selection (just drag)
             >
-                <svg style={{ position: 'absolute', top: 0, left: 0, height: 0, width: 0, pointerEvents: 'none' }}>
-                    <defs>
-                        <marker
-                            id="dot"
-                            viewBox="0 0 10 10"
-                            refX="5"
-                            refY="5"
-                            markerWidth="5"
-                            markerHeight="5"
-                            orient="auto-start-reverse"
-                        >
-                            <circle cx="5" cy="5" r="5" fill="#F1A0FA" />
-                        </marker>
-                    </defs>
-                </svg>
                 <Background
                     variant={BackgroundVariant.Dots}
                     gap={20}

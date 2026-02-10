@@ -3,6 +3,7 @@ import { persist, devtools } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 import { Node, Edge, Connection, addEdge, applyNodeChanges, applyEdgeChanges, NodeChange, EdgeChange } from '@xyflow/react';
 import { WorkflowNodeData, NodeType, NODE_CONFIG } from '@/types/nodes';
+import { getEdgeColor } from '@/lib/connector-colors';
 
 // History state for undo/redo
 interface HistoryState {
@@ -19,6 +20,7 @@ interface WorkflowState {
 
     // Selection state
     selectedNodeIds: string[];
+    selectedEdgeId: string | null;
 
     // Execution state
     isExecuting: boolean;
@@ -45,6 +47,7 @@ interface WorkflowState {
 
     // Selection actions
     setSelectedNodeIds: (ids: string[]) => void;
+    setSelectedEdgeId: (id: string | null) => void;
     clearSelection: () => void;
 
     // Execution actions
@@ -60,6 +63,12 @@ interface WorkflowState {
     canUndo: () => boolean;
     canRedo: () => boolean;
 
+    // Workflow persistence
+    createNewWorkflow: () => Promise<string>;
+    duplicateWorkflow: () => Promise<string>;
+    saveWorkflow: () => Promise<void>;
+    loadWorkflow: (id: string) => Promise<void>;
+
     // Utility
     reset: () => void;
     getNodeById: (id: string) => Node<WorkflowNodeData> | undefined;
@@ -73,6 +82,7 @@ const initialState = {
     nodes: [],
     edges: [],
     selectedNodeIds: [],
+    selectedEdgeId: null,
     isExecuting: false,
     executingNodeIds: [],
     history: [],
@@ -157,15 +167,21 @@ export const useWorkflowStore = create<WorkflowState>()(
                 onConnect: (connection) => {
                     if (!connection.source || !connection.target) return;
 
+                    // Look up source node type for edge color
+                    const sourceNode = get().nodes.find(n => n.id === connection.source);
+                    const sourceNodeType = sourceNode?.type || 'text';
+                    const sourceHandleId = connection.sourceHandle || 'output';
+                    const edgeColor = getEdgeColor(sourceNodeType, sourceHandleId);
+
                     const newEdge: Edge = {
                         id: `edge_${connection.source}_${connection.target}_${Date.now()}`,
                         source: connection.source,
                         target: connection.target,
-                        sourceHandle: connection.sourceHandle || 'output',
+                        sourceHandle: sourceHandleId,
                         targetHandle: connection.targetHandle || 'input',
+                        type: 'default',
                         animated: false,
-                        style: { stroke: '#F1A0FA', strokeWidth: 4 },
-                        markerEnd: 'dot',
+                        data: { color: edgeColor },
                     };
 
                     set((state) => ({
@@ -182,7 +198,8 @@ export const useWorkflowStore = create<WorkflowState>()(
                 },
 
                 setSelectedNodeIds: (ids) => set({ selectedNodeIds: ids }),
-                clearSelection: () => set({ selectedNodeIds: [] }),
+                setSelectedEdgeId: (id) => set({ selectedEdgeId: id }),
+                clearSelection: () => set({ selectedNodeIds: [], selectedEdgeId: null }),
 
                 setExecuting: (isExecuting) => set({ isExecuting }),
 
@@ -266,6 +283,129 @@ export const useWorkflowStore = create<WorkflowState>()(
                 canRedo: () => get().historyIndex < get().history.length - 1,
 
                 reset: () => set(initialState),
+
+                // Workflow persistence
+                createNewWorkflow: async () => {
+                    try {
+                        const response = await fetch('/api/workflows', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                name: 'Untitled Workflow',
+                                nodes: [],
+                                edges: [],
+                            }),
+                        });
+
+                        if (!response.ok) throw new Error('Failed to create workflow');
+
+                        const { workflow } = await response.json();
+                        set({
+                            workflowId: workflow.id,
+                            workflowName: workflow.name,
+                            nodes: [],
+                            edges: [],
+                            history: [{ nodes: [], edges: [] }],
+                            historyIndex: 0,
+                        });
+
+                        return workflow.id;
+                    } catch (error) {
+                        console.error('Error creating workflow:', error);
+                        throw error;
+                    }
+                },
+
+                duplicateWorkflow: async () => {
+                    try {
+                        const { workflowId, nodes, edges, workflowName } = get();
+                        if (!workflowId || workflowId === 'temp') {
+                            // Create new workflow with current state
+                            const response = await fetch('/api/workflows', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    name: `${workflowName} (Copy)`,
+                                    nodes,
+                                    edges,
+                                }),
+                            });
+
+                            if (!response.ok) throw new Error('Failed to duplicate workflow');
+                            const { workflow } = await response.json();
+                            return workflow.id;
+                        }
+
+                        // Duplicate existing workflow
+                        const response = await fetch(`/api/workflows/${workflowId}/duplicate`, {
+                            method: 'POST',
+                        });
+
+                        if (!response.ok) throw new Error('Failed to duplicate workflow');
+                        const { workflow } = await response.json();
+                        return workflow.id;
+                    } catch (error) {
+                        console.error('Error duplicating workflow:', error);
+                        throw error;
+                    }
+                },
+
+                saveWorkflow: async () => {
+                    try {
+                        const { workflowId, workflowName, nodes, edges } = get();
+
+                        if (!workflowId || workflowId === 'temp') {
+                            // Create new workflow
+                            const response = await fetch('/api/workflows', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    name: workflowName,
+                                    nodes,
+                                    edges,
+                                }),
+                            });
+
+                            if (!response.ok) throw new Error('Failed to save workflow');
+                            const { workflow } = await response.json();
+                            set({ workflowId: workflow.id });
+                        } else {
+                            // Update existing workflow
+                            await fetch(`/api/workflows/${workflowId}`, {
+                                method: 'PATCH',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    name: workflowName,
+                                    nodes,
+                                    edges,
+                                }),
+                            });
+                        }
+                    } catch (error) {
+                        console.error('Error saving workflow:', error);
+                        throw error;
+                    }
+                },
+
+                loadWorkflow: async (id: string) => {
+                    try {
+                        const response = await fetch(`/api/workflows/${id}`);
+                        if (!response.ok) throw new Error('Failed to load workflow');
+
+                        const { workflow } = await response.json();
+                        set({
+                            workflowId: workflow.id,
+                            workflowName: workflow.name,
+                            nodes: workflow.nodes || [],
+                            edges: workflow.edges || [],
+                            history: [{ nodes: workflow.nodes || [], edges: workflow.edges || [] }],
+                            historyIndex: 0,
+                        });
+                    } catch (error) {
+                        console.error('Error loading workflow:', error);
+                        throw error;
+                    }
+                },
 
                 getNodeById: (id) => get().nodes.find((n) => n.id === id),
             }),
