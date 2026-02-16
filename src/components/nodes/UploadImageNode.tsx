@@ -53,6 +53,8 @@ function UploadImageNodeComponent({ id, data, selected }: NodeProps) {
 
     // Upload Logic
     const uploadToTransloadit = async (file: File): Promise<string> => {
+        console.log('[Upload] Starting upload to Transloadit for file:', file.name, 'size:', file.size);
+
         const paramsResponse = await fetch('/api/upload/params', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -60,10 +62,14 @@ function UploadImageNodeComponent({ id, data, selected }: NodeProps) {
         });
 
         if (!paramsResponse.ok) {
+            const errorText = await paramsResponse.text();
+            console.error('[Upload] Failed to get upload params:', paramsResponse.status, errorText);
             throw new Error(`Failed to get upload params: ${paramsResponse.status}`);
         }
 
-        const { params, signature } = await paramsResponse.json();
+        const { params, signature, authKey } = await paramsResponse.json();
+        console.log('[Upload] Got Transloadit params, uploading file...');
+
         const formData = new FormData();
         formData.append('params', params);
         formData.append('signature', signature);
@@ -74,25 +80,59 @@ function UploadImageNodeComponent({ id, data, selected }: NodeProps) {
             body: formData,
         });
 
-        const assembly = await uploadResponse.json();
-        if (assembly.error) throw new Error(assembly.message || 'Upload failed');
-
-        let result = assembly;
-        while (result.ok !== 'ASSEMBLY_COMPLETED') {
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            const pollResponse = await fetch(result.assembly_ssl_url);
-            result = await pollResponse.json();
-            if (result.error) throw new Error(result.message || 'Processing failed');
+        if (!uploadResponse.ok) {
+            const errorText = await uploadResponse.text();
+            console.error('[Upload] Transloadit assembly request failed:', uploadResponse.status, errorText);
+            throw new Error(`Transloadit upload failed: ${uploadResponse.status}`);
         }
+
+        const assembly = await uploadResponse.json();
+        console.log('[Upload] Assembly created:', assembly.assembly_id, 'status:', assembly.ok);
+
+        if (assembly.error) {
+            console.error('[Upload] Transloadit assembly error:', assembly.error, assembly.message);
+            throw new Error(assembly.message || assembly.error || 'Upload failed');
+        }
+
+        // Poll for completion (max 120 seconds)
+        let result = assembly;
+        const startTime = Date.now();
+        const maxWait = 120000;
+        while (result.ok !== 'ASSEMBLY_COMPLETED' && Date.now() - startTime < maxWait) {
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            try {
+                const pollResponse = await fetch(result.assembly_ssl_url);
+                result = await pollResponse.json();
+                console.log('[Upload] Poll status:', result.ok);
+                if (result.error) {
+                    console.error('[Upload] Transloadit processing error:', result.error, result.message);
+                    throw new Error(result.message || 'Processing failed');
+                }
+            } catch (pollError) {
+                if (pollError instanceof Error && pollError.message.includes('Processing failed')) throw pollError;
+                console.warn('[Upload] Poll request failed, retrying...', pollError);
+            }
+        }
+
+        if (result.ok !== 'ASSEMBLY_COMPLETED') {
+            console.error('[Upload] Assembly timed out after', maxWait / 1000, 'seconds');
+            throw new Error('Upload timed out');
+        }
+
+        console.log('[Upload] Assembly completed, extracting result URL...');
 
         // Check all result steps for the uploaded file URL
         if (result.results) {
             // Prefer 'optimized' step for images
-            if (result.results.optimized?.length > 0) return result.results.optimized[0].ssl_url;
+            if (result.results.optimized?.length > 0) {
+                console.log('[Upload] Got optimized URL:', result.results.optimized[0].ssl_url);
+                return result.results.optimized[0].ssl_url;
+            }
             // Then check all other steps
             for (const stepName of Object.keys(result.results)) {
                 const stepResults = result.results[stepName];
                 if (Array.isArray(stepResults) && stepResults.length > 0 && stepResults[0].ssl_url) {
+                    console.log('[Upload] Got URL from step:', stepName, stepResults[0].ssl_url);
                     return stepResults[0].ssl_url;
                 }
             }
@@ -100,10 +140,11 @@ function UploadImageNodeComponent({ id, data, selected }: NodeProps) {
 
         // Fallback: check uploads array
         if (result.uploads && result.uploads.length > 0 && result.uploads[0].ssl_url) {
+            console.log('[Upload] Got URL from uploads array:', result.uploads[0].ssl_url);
             return result.uploads[0].ssl_url;
         }
 
-        console.error('Transloadit result structure:', JSON.stringify(result, null, 2));
+        console.error('[Upload] No result URL found. Full result:', JSON.stringify(result, null, 2));
         throw new Error('No upload result found in Transloadit response');
     };
 
@@ -111,19 +152,24 @@ function UploadImageNodeComponent({ id, data, selected }: NodeProps) {
         if (acceptedFiles.length === 0 || nodeData.isLocked) return;
         const file = acceptedFiles[0];
         setIsUploading(true);
+
+        // Show a preview immediately while uploading
+        const previewUrl = URL.createObjectURL(file);
+        updateNodeData(id, { imageUrl: previewUrl, fileName: file.name, status: 'running' });
+
         try {
             const imageUrl = await uploadToTransloadit(file);
+            console.log('[Upload] Success! Setting final URL:', imageUrl);
             updateNodeData(id, { imageUrl, fileName: file.name, output: imageUrl, status: 'success', error: undefined });
         } catch (error) {
-            console.error('Upload to server failed:', error);
-            // Use blob URL for local preview only — do NOT set as output
-            const localUrl = URL.createObjectURL(file);
+            console.error('[Upload] Upload failed:', error);
+            // Keep preview but mark as error
             updateNodeData(id, {
-                imageUrl: localUrl,
+                imageUrl: previewUrl,
                 fileName: file.name,
                 output: undefined, // Don't pass blob: URLs to downstream nodes
                 status: 'error',
-                error: 'Upload failed — image is preview-only. Please try uploading again or paste a direct URL.',
+                error: error instanceof Error ? error.message : 'Upload failed — please try again.',
             });
         } finally {
             setIsUploading(false);
