@@ -105,8 +105,8 @@ export const llmTask = task({
             return { text: completion.choices[0]?.message?.content || "" };
         } else {
             const { GoogleGenerativeAI } = await import("@google/generative-ai");
-            const apiKey = process.env.GOOGLE_AI_API_KEY;
-            if (!apiKey) throw new Error("GOOGLE_AI_API_KEY not set");
+            const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GOOGLE_AI_API_KEY;
+            if (!apiKey) throw new Error("GOOGLE_GENERATIVE_AI_API_KEY not set");
 
             const genAI = new GoogleGenerativeAI(apiKey);
             const model = genAI.getGenerativeModel({ model: modelId });

@@ -14,6 +14,15 @@ const executeWorkflowSchema = z.object({
     nodeIds: z.array(z.string()).optional(),
 });
 
+// Auto-detect Vercel environment and skip Trigger.dev
+// Trigger.dev's runs.poll() blocks the serverless function and causes 504 timeouts
+// Direct API calls (Groq, Gemini, Transloadit) work reliably within Vercel's limits
+function shouldSkipTriggerDev(): boolean {
+    if (process.env.SKIP_TRIGGER_DEV === 'true') return true;
+    if (process.env.VERCEL === '1' || process.env.VERCEL) return true;
+    return false;
+}
+
 export async function POST(request: NextRequest) {
     try {
         const { userId } = await auth();
@@ -167,8 +176,7 @@ export async function POST(request: NextRequest) {
                             break;
 
                         case 'llm':
-                            // Check if we should skip Trigger.dev
-                            if (process.env.SKIP_TRIGGER_DEV === 'true') {
+                            if (shouldSkipTriggerDev()) {
                                 output = await executeLLM(node, inputs);
                             } else {
                                 output = await executeLLMViaTrigger(node, inputs, run.id);
@@ -176,7 +184,7 @@ export async function POST(request: NextRequest) {
                             break;
 
                         case 'cropImage':
-                            if (process.env.SKIP_TRIGGER_DEV === 'true') {
+                            if (shouldSkipTriggerDev()) {
                                 output = await executeCropImage(node, inputs);
                             } else {
                                 output = await executeCropImageViaTrigger(node, inputs, run.id);
@@ -184,7 +192,7 @@ export async function POST(request: NextRequest) {
                             break;
 
                         case 'extractFrame':
-                            if (process.env.SKIP_TRIGGER_DEV === 'true') {
+                            if (shouldSkipTriggerDev()) {
                                 output = await executeExtractFrame(node, inputs);
                             } else {
                                 output = await executeExtractFrameViaTrigger(node, inputs, run.id);
@@ -549,9 +557,9 @@ async function executeLLMViaGemini(
 ): Promise<string> {
     const { GoogleGenerativeAI } = await import('@google/generative-ai');
 
-    const apiKey = process.env.GOOGLE_AI_API_KEY;
+    const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GOOGLE_AI_API_KEY;
     if (!apiKey) {
-        throw new Error('Google AI API key not configured');
+        throw new Error('Google AI API key not configured (set GOOGLE_GENERATIVE_AI_API_KEY)');
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
