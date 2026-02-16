@@ -140,6 +140,8 @@ export async function POST(request: NextRequest) {
                         }
                     });
 
+                    console.log(`[Execute] Node ${node.id} (${node.type}) inputs:`, JSON.stringify(inputs, null, 2));
+
                     // Execute based on node type
                     let output: unknown;
 
@@ -151,11 +153,17 @@ export async function POST(request: NextRequest) {
                         case 'uploadImage':
                             output = node.data?.imageUrl || '';
                             if (!output) throw new Error('No image uploaded');
+                            if (typeof output === 'string' && output.startsWith('blob:')) {
+                                throw new Error('Image upload incomplete: The image was not uploaded to the server. Please re-upload the image before running the workflow.');
+                            }
                             break;
 
                         case 'uploadVideo':
-                            output = node.data?.videoUrl || '';
+                            output = node.data?.output || node.data?.videoUrl || '';
                             if (!output) throw new Error('No video uploaded');
+                            if (typeof output === 'string' && output.startsWith('blob:')) {
+                                throw new Error('Video upload incomplete: The video was not uploaded to the server. Please re-upload the video before running the workflow.');
+                            }
                             break;
 
                         case 'llm':
@@ -389,6 +397,11 @@ async function executeExtractFrameViaTrigger(
     const videoUrl = inputs['video_url'] as string;
     if (!videoUrl) {
         throw new Error('Video URL is required');
+    }
+
+    // Guard against blob: URLs which cannot be accessed by the server
+    if (videoUrl.startsWith('blob:')) {
+        throw new Error('Video upload incomplete: The video URL is a local blob. Please re-upload the video before running the workflow.');
     }
 
     // Parse timestamp

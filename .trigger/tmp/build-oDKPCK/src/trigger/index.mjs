@@ -198,6 +198,9 @@ var extractFrameTask = task({
     console.log(`[Extract Frame] Processing: ${payload.videoUrl.substring(0, 60)}...`);
     console.log(`[Extract Frame] Timestamp: ${payload.timestamp || 0}s, Format: ${payload.format || "png"}`);
     const timestamp = payload.timestamp || 0;
+    if (payload.videoUrl.startsWith("blob:")) {
+      throw new Error("Invalid Video URL: The video url is a local blob (blob:...), which cannot be accessed by the server. Please ensure the video is fully uploaded before running the workflow.");
+    }
     const steps = {
       imported: {
         robot: "/http/import",

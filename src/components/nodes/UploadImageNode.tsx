@@ -59,6 +59,10 @@ function UploadImageNodeComponent({ id, data, selected }: NodeProps) {
             body: JSON.stringify({ type: 'image' }),
         });
 
+        if (!paramsResponse.ok) {
+            throw new Error(`Failed to get upload params: ${paramsResponse.status}`);
+        }
+
         const { params, signature } = await paramsResponse.json();
         const formData = new FormData();
         formData.append('params', params);
@@ -81,9 +85,26 @@ function UploadImageNodeComponent({ id, data, selected }: NodeProps) {
             if (result.error) throw new Error(result.message || 'Processing failed');
         }
 
-        if (result.results.optimized?.length > 0) return result.results.optimized[0].ssl_url;
-        if (result.results[':original']?.length > 0) return result.results[':original'][0].ssl_url;
-        throw new Error('No upload result');
+        // Check all result steps for the uploaded file URL
+        if (result.results) {
+            // Prefer 'optimized' step for images
+            if (result.results.optimized?.length > 0) return result.results.optimized[0].ssl_url;
+            // Then check all other steps
+            for (const stepName of Object.keys(result.results)) {
+                const stepResults = result.results[stepName];
+                if (Array.isArray(stepResults) && stepResults.length > 0 && stepResults[0].ssl_url) {
+                    return stepResults[0].ssl_url;
+                }
+            }
+        }
+
+        // Fallback: check uploads array
+        if (result.uploads && result.uploads.length > 0 && result.uploads[0].ssl_url) {
+            return result.uploads[0].ssl_url;
+        }
+
+        console.error('Transloadit result structure:', JSON.stringify(result, null, 2));
+        throw new Error('No upload result found in Transloadit response');
     };
 
     const onDrop = useCallback(async (acceptedFiles: File[]) => {
@@ -92,15 +113,22 @@ function UploadImageNodeComponent({ id, data, selected }: NodeProps) {
         setIsUploading(true);
         try {
             const imageUrl = await uploadToTransloadit(file);
-            updateNodeData(id, { imageUrl, fileName: file.name, output: imageUrl, status: 'success' });
+            updateNodeData(id, { imageUrl, fileName: file.name, output: imageUrl, status: 'success', error: undefined });
         } catch (error) {
-            console.error('Upload failed, using local fallback:', error);
+            console.error('Upload to server failed:', error);
+            // Use blob URL for local preview only — do NOT set as output
             const localUrl = URL.createObjectURL(file);
-            updateNodeData(id, { imageUrl: localUrl, fileName: file.name, output: localUrl, status: 'success' });
+            updateNodeData(id, {
+                imageUrl: localUrl,
+                fileName: file.name,
+                output: undefined, // Don't pass blob: URLs to downstream nodes
+                status: 'error',
+                error: 'Upload failed — image is preview-only. Please try uploading again or paste a direct URL.',
+            });
         } finally {
             setIsUploading(false);
         }
-    }, [id, updateNodeData, nodeData.isLocked]);
+    }, [nodeData.isLocked, id, updateNodeData]);
 
     const { getRootProps, getInputProps, isDragActive } = useDropzone({
         onDrop,
@@ -121,7 +149,7 @@ function UploadImageNodeComponent({ id, data, selected }: NodeProps) {
                 className={`
                     group relative rounded-xl min-w-[460px] shadow-2xl transition-all duration-200
                     ${selected ? 'bg-[#2B2B2F] ring-2 ring-inset ring-[#333337]' : 'bg-[#212126]'}
-                    ${isExecuting ? 'ring-2 ring-[#C084FC]/50' : ''}
+                    ${isExecuting ? 'ring-2 ring-[#C084FC]/50 node-executing' : ''}
                     ${nodeData.status === 'error' ? 'ring-2 ring-red-500' : ''}
                 `}
             >

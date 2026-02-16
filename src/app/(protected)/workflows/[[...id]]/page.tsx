@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import { WorkflowCanvas } from '@/components/workflow';
 import { WorkflowHeader } from '@/components/workflow/WorkflowHeader';
 import IconSidebar from '@/components/workflow/Sidebar/IconSidebar';
@@ -13,7 +13,9 @@ import { ChevronDown } from 'lucide-react';
 
 export default function WorkflowEditorPage() {
     const params = useParams();
+    const searchParams = useSearchParams();
     const workflowId = (params?.id as string[] | undefined)?.[0];
+    const templateId = searchParams.get('template');
     const [isLoaded, setIsLoaded] = useState(false);
     const [activeSection, setActiveSection] = useState<string | null>(null);
     const { isHistoryOpen, setHistoryOpen } = useUIStore();

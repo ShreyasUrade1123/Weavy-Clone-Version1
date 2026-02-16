@@ -33,6 +33,8 @@ interface WorkflowState {
     // Actions
     setWorkflow: (id: string, name: string, nodes: Node<WorkflowNodeData>[], edges: Edge[]) => void;
     setWorkflowName: (name: string) => void;
+    setNodes: (nodes: Node<WorkflowNodeData>[]) => void;
+    setEdges: (edges: Edge[]) => void;
 
     // Node actions
     addNode: (type: NodeType, position: { x: number; y: number }, initialData?: Partial<WorkflowNodeData>) => string;
@@ -107,6 +109,9 @@ export const useWorkflowStore = create<WorkflowState>()(
                 },
 
                 setWorkflowName: (name) => set({ workflowName: name }),
+                setNodes: (nodes) => set({ nodes }),
+                setEdges: (edges) => set({ edges }),
+
 
                 addNode: (type, position, initialData) => {
                     const config = NODE_CONFIG[type];

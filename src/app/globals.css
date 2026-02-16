@@ -48,8 +48,15 @@ body {
   }
 }
 
-.animate-pulse {
+.node-executing {
   animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* Animated flowing edge */
+@keyframes dash-flow {
+  to {
+    stroke-dashoffset: -24;
+  }
 }
 
 /* Custom scrollbar */

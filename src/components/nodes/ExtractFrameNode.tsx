@@ -45,7 +45,7 @@ function ExtractFrameNodeComponent({ id, data, selected }: NodeProps) {
     // Find connected source video
     const connectedEdge = edges.find(e => e.target === id && e.targetHandle === 'video_url');
     const sourceNode = connectedEdge ? getNode(connectedEdge.source) : null;
-    const sourceVideoUrl = (sourceNode?.data?.videoUrl ?? sourceNode?.data?.output) as string | undefined;
+    const sourceVideoUrl = (sourceNode?.data?.output ?? sourceNode?.data?.videoUrl) as string | undefined;
 
     // Sync source video to node data
     useEffect(() => {
@@ -132,7 +132,7 @@ function ExtractFrameNodeComponent({ id, data, selected }: NodeProps) {
                 className={`
                     group relative rounded-2xl shadow-2xl transition-all duration-200
                     ${selected ? 'bg-[#2B2B2F] ring-2 ring-inset ring-[#333337]' : 'bg-[#212126]'}
-                    ${isExecuting ? 'ring-2 ring-[#C084FC]/50' : ''}
+                    ${isExecuting ? 'ring-2 ring-[#C084FC]/50 node-executing' : ''}
                     ${nodeData.status === 'error' ? 'ring-2 ring-red-500' : ''}
                     ${nodeData.videoUrl ? 'min-w-[300px] max-w-[600px] w-fit' : 'min-w-[460px] w-[460px]'}
                 `}

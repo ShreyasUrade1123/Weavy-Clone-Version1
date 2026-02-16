@@ -106,7 +106,8 @@ export default function DashboardPage() {
                 // Navigate to the new workflow editor
                 router.push(`/workflows/${data.workflow.id}`);
             } else {
-                console.error('Failed to create workflow');
+                const errorData = await response.text();
+                console.error('Failed to create workflow:', response.status, errorData);
                 setIsCreating(false);
             }
         } catch (error) {

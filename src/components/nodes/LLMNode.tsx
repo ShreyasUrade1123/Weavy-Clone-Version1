@@ -166,7 +166,7 @@ function LLMNodeComponent({ id, data, selected }: NodeProps) {
             className={`
                 group relative rounded-xl min-w-[460px] max-w-[500px] shadow-2xl transition-all duration-200 bg-[#212126]
                 ${selected ? 'ring-2 ring-inset ring-[#333337] bg-[#2B2B2F]' : ''}
-                ${isExecuting ? 'ring-2 ring-[#E1E476]/50' : ''}
+                ${isExecuting ? 'ring-2 ring-[#E1E476]/50 node-executing' : ''}
                 ${nodeData.status === 'error' ? 'ring-2 ring-red-500' : ''}
             `}
         >

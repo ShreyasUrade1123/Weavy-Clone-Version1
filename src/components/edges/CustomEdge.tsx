@@ -4,13 +4,14 @@ import { memo } from 'react';
 import {
     EdgeProps,
     getBezierPath,
-    useReactFlow,
 } from '@xyflow/react';
 import { useWorkflowStore } from '@/stores/workflow-store';
 import { CONNECTOR_COLORS } from '@/lib/connector-colors';
 
 function CustomEdgeComponent({
     id,
+    source,
+    target,
     sourceX,
     sourceY,
     targetX,
@@ -24,6 +25,13 @@ function CustomEdgeComponent({
     const selectedEdgeId = useWorkflowStore((s) => s.selectedEdgeId);
     const setSelectedEdgeId = useWorkflowStore((s) => s.setSelectedEdgeId);
     const isSelected = selected || selectedEdgeId === id;
+
+    // Reactively check if either connected node is executing
+    const isFlowing = useWorkflowStore((s) => {
+        const sourceNode = s.nodes.find((n) => n.id === source);
+        const targetNode = s.nodes.find((n) => n.id === target);
+        return sourceNode?.data?.status === 'running' || targetNode?.data?.status === 'running';
+    });
 
     const [edgePath] = getBezierPath({
         sourceX,
@@ -53,15 +61,17 @@ function CustomEdgeComponent({
                 style={{ cursor: 'pointer' }}
             />
 
-            {/* Visible edge path */}
+            {/* Visible edge path — animated only when nodes are running */}
             <path
                 d={edgePath}
                 fill="none"
                 stroke={edgeColor}
                 strokeWidth={strokeWidth}
+                strokeDasharray={isFlowing ? '8 4' : 'none'}
                 style={{
                     transition: 'stroke-width 0.15s ease',
                     filter: isSelected ? `drop-shadow(0 0 6px ${edgeColor}80)` : 'none',
+                    animation: isFlowing ? 'dash-flow 0.6s linear infinite' : 'none',
                 }}
             />
 

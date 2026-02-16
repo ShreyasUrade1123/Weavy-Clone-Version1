@@ -5,6 +5,7 @@ import { LandingHero } from "@/components/landing/LandingHero"
 import { FlowVisual } from "@/components/landing/FlowVisual"
 
 export default async function HomePage() {
+  console.log("HomePage rendering");
   const { userId } = await auth()
 
   if (userId) {

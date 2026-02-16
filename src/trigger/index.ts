@@ -265,6 +265,9 @@ export const extractFrameTask = task({
 
         const timestamp = payload.timestamp || 0;
 
+        if (payload.videoUrl.startsWith('blob:')) {
+            throw new Error('Invalid Video URL: The video url is a local blob (blob:...), which cannot be accessed by the server. Please ensure the video is fully uploaded before running the workflow.');
+        }
         const steps: Record<string, unknown> = {
             imported: {
                 robot: '/http/import',

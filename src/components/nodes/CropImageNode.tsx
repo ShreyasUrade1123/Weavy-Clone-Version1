@@ -180,6 +180,7 @@ function CropImageNodeComponent({ id, data, selected }: NodeProps) {
     };
 
     const currentRatioLabel = ASPECT_RATIOS.find(ar => ar.value === nodeData.aspectRatio)?.label || 'Custom';
+    const isExecuting = nodeData.status === 'running';
 
     return (
         <>
@@ -187,6 +188,8 @@ function CropImageNodeComponent({ id, data, selected }: NodeProps) {
                 className={`
                     group relative rounded-2xl min-w-[460px] shadow-2xl transition-all duration-200
                     ${selected ? 'bg-[#2B2B2F] ring-2 ring-inset ring-[#333337]' : 'bg-[#212126]'}
+                    ${isExecuting ? 'ring-2 ring-[#C084FC]/50 node-executing' : ''}
+                    ${nodeData.status === 'error' ? 'ring-2 ring-red-500' : ''}
                 `}
                 style={{ fontFamily: 'var(--font-dm-sans)' }}
             >
