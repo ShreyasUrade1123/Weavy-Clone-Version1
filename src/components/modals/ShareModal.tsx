@@ -38,7 +38,7 @@ export function ShareModal({ isOpen, onClose }: ShareModalProps) {
             >
                 {/* Modal */}
                 <div
-                    className="bg-[#1C1C1E] rounded-2xl w-full max-w-2xl p-8 relative"
+                    className="bg-[#1C1C1E] rounded-2xl w-full max-w-lg p-6 relative font-[family-name:var(--font-dm-sans)] text-[12px] font-normal"
                     onClick={(e) => e.stopPropagation()}
                 >
                     {/* Close button */}
@@ -50,7 +50,7 @@ export function ShareModal({ isOpen, onClose }: ShareModalProps) {
                     </button>
 
                     {/* Title */}
-                    <h2 className="text-white text-2xl font-semibold mb-8">
+                    <h2 className="text-white text-2xl font-semibold mb-8 mt-3">
                         Invite others
                     </h2>
 
@@ -79,7 +79,7 @@ export function ShareModal({ isOpen, onClose }: ShareModalProps) {
 
                     {/* Who has access */}
                     <div className="mb-8">
-                        <h3 className="text-white text-lg font-medium mb-4">
+                        <h3 className="text-white text-[12px] font-medium mb-4">
                             Who has access
                         </h3>
 
@@ -92,9 +92,9 @@ export function ShareModal({ isOpen, onClose }: ShareModalProps) {
                                 <div>
                                     <div className="text-white font-medium flex items-center gap-2">
                                         {user?.firstName || user?.emailAddresses[0]?.emailAddress}
-                                        <span className="text-gray-500 text-sm">You</span>
+                                        <span className="text-gray-500 text-[10px]">You</span>
                                     </div>
-                                    <div className="text-gray-400 text-sm">
+                                    <div className="text-gray-400 text-[10px]">
                                         {user?.emailAddresses[0]?.emailAddress}
                                     </div>
                                 </div>

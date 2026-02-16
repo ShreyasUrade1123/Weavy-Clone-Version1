@@ -4,7 +4,19 @@ import React from 'react';
 import { useParams } from 'next/navigation';
 import { useWorkflowStore } from '@/stores/workflow-store';
 import { useUIStore } from '@/stores/ui-store';
-import { Info, Sparkles, ChevronDown, Share2, ArrowRight } from 'lucide-react';
+import {
+    Info,
+    Sparkles,
+    ChevronDown,
+    Share2,
+    ArrowRight,
+    Save,
+    Upload,
+    Download,
+    Loader2
+} from 'lucide-react';
+import { toast } from 'sonner';
+import { useRef, useState } from 'react';
 import { LLMNodeData } from '@/types/nodes';
 
 const MODELS = [
@@ -27,49 +39,119 @@ export default function PropertiesSidebar() {
     const edges = useWorkflowStore((state) => state.edges);
     const updateNodeData = useWorkflowStore((state) => state.updateNodeData);
     const setNodeStatus = useWorkflowStore((state) => state.setNodeStatus);
+    const workflowName = useWorkflowStore((state) => state.workflowName);
+    const setWorkflowName = useWorkflowStore((state) => state.setWorkflowName);
+    const setNodes = useWorkflowStore((state) => state.setNodes);
+    const setEdges = useWorkflowStore((state) => state.setEdges);
+    const saveWorkflow = useWorkflowStore((state) => state.saveWorkflow);
     const { toggleHistory, isHistoryOpen } = useUIStore();
 
     // Internal state for run configuration
-    const [runCount, setRunCount] = React.useState(1);
+    const [runCount, setRunCount] = useState(1);
+    const [isSaving, setIsSaving] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const selectedNode = nodes.find(n => n.id === selectedNodeIds[0]);
 
-    if (!selectedNode || selectedNodeIds.length !== 1) {
-        return null; // Only show when exactly one node is selected
-    }
+    // ... (Hooks for specific node logic remain same, skipping to header implementation)
 
-    // Only supporting LLM node properties for now as per request
+    // Handlers
+    const handleSave = async () => {
+        setIsSaving(true);
+        try {
+            await saveWorkflow();
+            toast.success('Workflow saved successfully');
+        } catch (error) {
+            console.error('Failed to save workflow:', error);
+            toast.error('Failed to save workflow');
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const handleExport = () => {
+        const data = {
+            workflow: {
+                name: workflowName,
+                nodes,
+                edges,
+            },
+            version: '1.0.0',
+            exportedAt: new Date().toISOString(),
+        };
+
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${workflowName.replace(/\s+/g, '-').toLowerCase() || 'workflow'}.json`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        toast.success('Workflow exported to JSON');
+    };
+
+    const handleImportClick = () => {
+        fileInputRef.current?.click();
+    };
+
+    const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            try {
+                const content = event.target?.result as string;
+                const data = JSON.parse(content);
+
+                if (data.workflow && Array.isArray(data.workflow.nodes) && Array.isArray(data.workflow.edges)) {
+                    setNodes(data.workflow.nodes);
+                    setEdges(data.workflow.edges);
+                    if (data.workflow.name) setWorkflowName(data.workflow.name);
+                    toast.success('Workflow imported successfully');
+                } else {
+                    toast.error('Invalid workflow JSON format');
+                }
+            } catch (error) {
+                console.error('Import failed:', error);
+                toast.error('Failed to parse workflow file');
+            }
+        };
+        reader.readAsText(file);
+        e.target.value = '';
+    };
+
+    // Re-check return for selected node (moved logic here for cleaner replacement)
+    if (!selectedNode || selectedNodeIds.length !== 1) {
+        return null;
+    }
     if (selectedNode.type !== 'llm') {
         return null;
     }
-
     const data = selectedNode.data as LLMNodeData;
 
+    // ... (Change handlers - keeping existing ones, just ensuring they avail in scope)
     const handleModelChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         updateNodeData(selectedNode.id, { model: e.target.value });
     };
-
     const handleThinkingChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         updateNodeData(selectedNode.id, { thinking: e.target.checked });
     };
-
     const handleTemperatureChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         updateNodeData(selectedNode.id, { temperature: parseFloat(e.target.value) });
     };
-
     const handleOpenShare = () => {
         window.dispatchEvent(new Event('openShareModal'));
     };
 
     const handleRunSelected = async () => {
-        // Run logic duplicated from page.tsx (simplified for single/selected node run)
+        if (!selectedNode) return;
         const node = selectedNode;
         setNodeStatus(node.id, 'running');
 
         try {
-            // We run this 'runCount' times? For now just once as per standard execution
-            // If user wants loop, we'd loop here.
-            // Let's loop if runCount > 1
             for (let i = 0; i < runCount; i++) {
                 const response = await fetch('/api/workflows/execute', {
                     method: 'POST',
@@ -87,7 +169,6 @@ export default function PropertiesSidebar() {
 
                 const result = await response.json();
 
-                // Update specific node result
                 if (result.results) {
                     const nodeResult = result.results.find((r: any) => r.nodeId === node.id);
                     if (nodeResult) {
@@ -106,29 +187,45 @@ export default function PropertiesSidebar() {
     };
 
     return (
-        <div className="fixed top-0 right-0 h-full w-[240px] bg-[#212126] border-l border-[#27272A] flex flex-col z-30 font-[family-name:var(--font-dm-sans)]">
+        <div className="fixed top-0 right-0 h-full w-[244px] bg-[#212126] border-l border-[#27272A] flex flex-col z-30 font-[family-name:var(--font-dm-sans)]">
             {/* Header Overlay Replica */}
-            <div className="p-4 flex flex-col gap-2 border-b border-[#27272A]/50 pb-6">
-                {/* Row 1: Credits, Share */}
-                <div className="flex items-center justify-between gap-2">
+            <div className="px-3 pb-4 pt-7 flex flex-col gap-3 border-b border-[#27272A]/50 pb-6">
+                {/* Row 1: Credits, Save, Share */}
+                <div className="flex items-center justify-between gap-1">
                     {/* Credits Badge */}
                     <div className="flex items-center gap-1.5 px-2 py-1 text-gray-200">
                         <Sparkles className="w-3.5 h-3.5 text-gray-400" />
-                        <span className="text-[12px] font-normal leading-none text-white">148 credits</span>
+                        <span className="text-[12px] font-normal leading-none text-white">149 credits</span>
                     </div>
 
-                    {/* Share Button */}
-                    <button
-                        onClick={handleOpenShare}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-[#E1E476] hover:bg-[#d4d765] text-black rounded-lg transition-colors"
-                    >
-                        <Share2 className="w-3.5 h-3.5" />
-                        <span className="text-[12px] font-normal leading-none">Share</span>
-                    </button>
+                    <div className="flex items-center gap-1">
+                        {/* Save Button */}
+                        <button
+                            onClick={handleSave}
+                            disabled={isSaving}
+                            className="p-1.5 text-gray-400 hover:text-white hover:bg-[#333336] rounded-md transition-colors"
+                            title="Save Workflow"
+                        >
+                            {isSaving ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                                <Save className="w-3.5 h-3.5" />
+                            )}
+                        </button>
+
+                        {/* Share Button */}
+                        <button
+                            onClick={handleOpenShare}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#E1E476] hover:bg-[#d4d765] text-black rounded-lg transition-colors"
+                        >
+                            <Share2 className="w-3.5 h-3.5" />
+                            <span className="text-[12px] font-normal leading-none">Share</span>
+                        </button>
+                    </div>
                 </div>
 
-                {/* Row 2: Tasks Dropdown */}
-                <div className="flex items-center px-2">
+                {/* Row 2: Tasks Dropdown + Export/Import */}
+                <div className="flex items-center justify-between px-2">
                     <button
                         onClick={toggleHistory}
                         className={`flex items-center gap-1 text-gray-400 hover:text-white transition-colors group ${isHistoryOpen ? 'text-white' : ''}`}
@@ -136,6 +233,30 @@ export default function PropertiesSidebar() {
                         <span className="text-[12px] font-normal leading-none">Tasks</span>
                         <ChevronDown className={`w-3.5 h-3.5 text-gray-500 group-hover:text-gray-300 transition-colors ${isHistoryOpen ? 'rotate-180' : ''}`} />
                     </button>
+
+                    <div className="flex items-center gap-1">
+                        <button
+                            onClick={handleExport}
+                            className="p-1 text-gray-400 hover:text-white hover:bg-[#333336] rounded transition-colors"
+                            title="Export JSON"
+                        >
+                            <Download className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                            onClick={handleImportClick}
+                            className="p-1 text-gray-400 hover:text-white hover:bg-[#333336] rounded transition-colors"
+                            title="Import JSON"
+                        >
+                            <Upload className="w-3.5 h-3.5" />
+                        </button>
+                        <input
+                            type="file"
+                            ref={fileInputRef}
+                            onChange={handleImportFile}
+                            className="hidden"
+                            accept=".json"
+                        />
+                    </div>
                 </div>
             </div>
 
