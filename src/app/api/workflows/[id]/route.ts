@@ -113,3 +113,43 @@ async function handleUpdate(
 // Support both PUT and PATCH (the store uses PATCH)
 export const PUT = handleUpdate;
 export const PATCH = handleUpdate;
+
+export async function DELETE(
+    request: NextRequest,
+    props: { params: Promise<{ id: string }> }
+) {
+    try {
+        const params = await props.params;
+
+        const { userId: clerkId } = await auth();
+        if (!clerkId) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        const user = await prisma.user.findUnique({ where: { clerkId } });
+        if (!user) {
+            return NextResponse.json({ error: 'User not found' }, { status: 404 });
+        }
+
+        // Verify ownership
+        const existing = await prisma.workflow.findFirst({
+            where: { id: params.id, userId: user.id },
+        });
+
+        if (!existing) {
+            return NextResponse.json({ error: 'Workflow not found' }, { status: 404 });
+        }
+
+        await prisma.workflow.delete({
+            where: { id: params.id },
+        });
+
+        return NextResponse.json({ success: true });
+    } catch (error) {
+        console.error('Failed to delete workflow:', error);
+        return NextResponse.json(
+            { error: 'Failed to delete workflow' },
+            { status: 500 }
+        );
+    }
+}
