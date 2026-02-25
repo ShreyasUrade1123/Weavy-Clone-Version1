@@ -1,0 +1,112 @@
+{
+  "build": {
+  },
+  "cliPackageVersion": "4.4.1",
+  "config": {
+    "dirs": [
+      "./src/trigger"
+    ],
+    "project": "proj_rdsuxydrzxxorhlynnfd"
+  },
+  "configPath": "C:\\Users\\SHREYAS URADE\\Desktop\\Project Folder\\Galaxy.ai\\weavy-clone\\.trigger\\tmp\\build-Axkwmy\\Desktop\\Project Folder\\Galaxy.ai\\weavy-clone\\trigger.config.mjs",
+  "contentHash": "659e2d0f9c2edaab59164290023a4215",
+  "customConditions": [
+  ],
+  "deploy": {
+    "env": {
+    }
+  },
+  "environment": "dev",
+  "externals": [
+    {
+      "name": "import-in-the-middle",
+      "version": "1.11.0"
+    }
+  ],
+  "files": [
+    {
+      "entry": "src/trigger/index.ts",
+      "out": "C:\\Users\\SHREYAS URADE\\Desktop\\Project Folder\\Galaxy.ai\\weavy-clone\\.trigger\\tmp\\build-Axkwmy\\Desktop\\Project Folder\\Galaxy.ai\\weavy-clone\\src\\trigger\\index.mjs"
+    }
+  ],
+  "indexWorkerEntryPoint": "C:\\Users\\SHREYAS URADE\\Desktop\\Project Folder\\Galaxy.ai\\weavy-clone\\.trigger\\tmp\\build-Axkwmy\\AppData\\Local\\npm-cache\\_npx\\f51a09bd0abf5f10\\node_modules\\trigger.dev\\dist\\esm\\entryPoints\\dev-index-worker.mjs",
+  "otelImportHook": {
+    "include": [
+    ]
+  },
+  "outputHashes": {
+    "C:\\Users\\SHREYAS URADE\\Desktop\\Project Folder\\Galaxy.ai\\weavy-clone\\.trigger\\tmp\\build-Axkwmy\\AppData\\Local\\npm-cache\\_npx\\f51a09bd0abf5f10\\node_modules\\trigger.dev\\dist\\esm\\entryPoints\\dev-index-worker.mjs": "+DBPu6ROpck",
+    "C:\\Users\\SHREYAS URADE\\Desktop\\Project Folder\\Galaxy.ai\\weavy-clone\\.trigger\\tmp\\build-Axkwmy\\AppData\\Local\\npm-cache\\_npx\\f51a09bd0abf5f10\\node_modules\\trigger.dev\\dist\\esm\\entryPoints\\dev-index-worker.mjs.map": "2mwPsynVXWg",
+    "C:\\Users\\SHREYAS URADE\\Desktop\\Project Folder\\Galaxy.ai\\weavy-clone\\.trigger\\tmp\\build-Axkwmy\\AppData\\Local\\npm-cache\\_npx\\f51a09bd0abf5f10\\node_modules\\trigger.dev\\dist\\esm\\entryPoints\\dev-run-worker.mjs": "3xQWCzYZe6E",
+    "C:\\Users\\SHREYAS URADE\\Desktop\\Project Folder\\Galaxy.ai\\weavy-clone\\.trigger\\tmp\\build-Axkwmy\\AppData\\Local\\npm-cache\\_npx\\f51a09bd0abf5f10\\node_modules\\trigger.dev\\dist\\esm\\entryPoints\\dev-run-worker.mjs.map": "9uNTQ9Gk2ng",
+    "C:\\Users\\SHREYAS URADE\\Desktop\\Project Folder\\Galaxy.ai\\weavy-clone\\.trigger\\tmp\\build-Axkwmy\\Desktop\\Project Folder\\Galaxy.ai\\weavy-clone\\src\\trigger\\index.mjs": "OtDFfswysXA",
+    "C:\\Users\\SHREYAS URADE\\Desktop\\Project Folder\\Galaxy.ai\\weavy-clone\\.trigger\\tmp\\build-Axkwmy\\Desktop\\Project Folder\\Galaxy.ai\\weavy-clone\\src\\trigger\\index.mjs.map": "IWfif0gh4ZI",
+    "C:\\Users\\SHREYAS URADE\\Desktop\\Project Folder\\Galaxy.ai\\weavy-clone\\.trigger\\tmp\\build-Axkwmy\\Desktop\\Project Folder\\Galaxy.ai\\weavy-clone\\trigger.config.mjs": "/fGZkHQD25U",
+    "C:\\Users\\SHREYAS URADE\\Desktop\\Project Folder\\Galaxy.ai\\weavy-clone\\.trigger\\tmp\\build-Axkwmy\\Desktop\\Project Folder\\Galaxy.ai\\weavy-clone\\trigger.config.mjs.map": "BtRoshwohHQ",
+    "C:\\Users\\SHREYAS URADE\\Desktop\\Project Folder\\Galaxy.ai\\weavy-clone\\.trigger\\tmp\\build-Axkwmy\\chunk-4VOZ4RGY.mjs": "ssmc5GBbr1w",
+    "C:\\Users\\SHREYAS URADE\\Desktop\\Project Folder\\Galaxy.ai\\weavy-clone\\.trigger\\tmp\\build-Axkwmy\\chunk-4VOZ4RGY.mjs.map": "Jk0PRneOHwU",
+    "C:\\Users\\SHREYAS URADE\\Desktop\\Project Folder\\Galaxy.ai\\weavy-clone\\.trigger\\tmp\\build-Axkwmy\\chunk-5A2LE32G.mjs": "iAHCaksTzjY",
+    "C:\\Users\\SHREYAS URADE\\Desktop\\Project Folder\\Galaxy.ai\\weavy-clone\\.trigger\\tmp\\build-Axkwmy\\chunk-5A2LE32G.mjs.map": "jXG8+ZCdH20",
+    "C:\\Users\\SHREYAS URADE\\Desktop\\Project Folder\\Galaxy.ai\\weavy-clone\\.trigger\\tmp\\build-Axkwmy\\chunk-DXBYZRZ6.mjs": "f1iO8CxiEo4",
+    "C:\\Users\\SHREYAS URADE\\Desktop\\Project Folder\\Galaxy.ai\\weavy-clone\\.trigger\\tmp\\build-Axkwmy\\chunk-DXBYZRZ6.mjs.map": "DEwatyWyXgo",
+    "C:\\Users\\SHREYAS URADE\\Desktop\\Project Folder\\Galaxy.ai\\weavy-clone\\.trigger\\tmp\\build-Axkwmy\\chunk-EUWNY23E.mjs": "VhW7Sp1ENd0",
+    "C:\\Users\\SHREYAS URADE\\Desktop\\Project Folder\\Galaxy.ai\\weavy-clone\\.trigger\\tmp\\build-Axkwmy\\chunk-EUWNY23E.mjs.map": "0WIp7TljphU",
+    "C:\\Users\\SHREYAS URADE\\Desktop\\Project Folder\\Galaxy.ai\\weavy-clone\\.trigger\\tmp\\build-Axkwmy\\chunk-H2EV7FXT.mjs": "Zs4F+U+V67M",
+    "C:\\Users\\SHREYAS URADE\\Desktop\\Project Folder\\Galaxy.ai\\weavy-clone\\.trigger\\tmp\\build-Axkwmy\\chunk-H2EV7FXT.mjs.map": "OafA5hwZQJE",
+    "C:\\Users\\SHREYAS URADE\\Desktop\\Project Folder\\Galaxy.ai\\weavy-clone\\.trigger\\tmp\\build-Axkwmy\\chunk-QLEYTOV4.mjs": "Oo+6xm8UqnU",
+    "C:\\Users\\SHREYAS URADE\\Desktop\\Project Folder\\Galaxy.ai\\weavy-clone\\.trigger\\tmp\\build-Axkwmy\\chunk-QLEYTOV4.mjs.map": "a2PyoTxf0Jo",
+    "C:\\Users\\SHREYAS URADE\\Desktop\\Project Folder\\Galaxy.ai\\weavy-clone\\.trigger\\tmp\\build-Axkwmy\\chunk-SLAQP7UH.mjs": "fCoXgWgDoeI",
+    "C:\\Users\\SHREYAS URADE\\Desktop\\Project Folder\\Galaxy.ai\\weavy-clone\\.trigger\\tmp\\build-Axkwmy\\chunk-SLAQP7UH.mjs.map": "uqfyjPaYzlE",
+    "C:\\Users\\SHREYAS URADE\\Desktop\\Project Folder\\Galaxy.ai\\weavy-clone\\.trigger\\tmp\\build-Axkwmy\\chunk-ZHBVPOXT.mjs": "M0zKuiekTzY",
+    "C:\\Users\\SHREYAS URADE\\Desktop\\Project Folder\\Galaxy.ai\\weavy-clone\\.trigger\\tmp\\build-Axkwmy\\chunk-ZHBVPOXT.mjs.map": "LMPzUuAiOIM",
+    "C:\\Users\\SHREYAS URADE\\Desktop\\Project Folder\\Galaxy.ai\\weavy-clone\\.trigger\\tmp\\build-Axkwmy\\crypto.node-FM7UGXJT.mjs": "z8aG5X8jtIE",
+    "C:\\Users\\SHREYAS URADE\\Desktop\\Project Folder\\Galaxy.ai\\weavy-clone\\.trigger\\tmp\\build-Axkwmy\\crypto.node-FM7UGXJT.mjs.map": "0b4tlwmkM3g",
+    "C:\\Users\\SHREYAS URADE\\Desktop\\Project Folder\\Galaxy.ai\\weavy-clone\\.trigger\\tmp\\build-Axkwmy\\crypto.node-XRVDZYDR.mjs": "GcFh3y+kCyo",
+    "C:\\Users\\SHREYAS URADE\\Desktop\\Project Folder\\Galaxy.ai\\weavy-clone\\.trigger\\tmp\\build-Axkwmy\\crypto.node-XRVDZYDR.mjs.map": "VHU7akysEiw",
+    "C:\\Users\\SHREYAS URADE\\Desktop\\Project Folder\\Galaxy.ai\\weavy-clone\\.trigger\\tmp\\build-Axkwmy\\dist-XNWGOHQG.mjs": "qc966tbc/1E",
+    "C:\\Users\\SHREYAS URADE\\Desktop\\Project Folder\\Galaxy.ai\\weavy-clone\\.trigger\\tmp\\build-Axkwmy\\dist-XNWGOHQG.mjs.map": "iE9vZceT/pk",
+    "C:\\Users\\SHREYAS URADE\\Desktop\\Project Folder\\Galaxy.ai\\weavy-clone\\.trigger\\tmp\\build-Axkwmy\\esm-RPN3OIEW.mjs": "ORgrtVZKFNs",
+    "C:\\Users\\SHREYAS URADE\\Desktop\\Project Folder\\Galaxy.ai\\weavy-clone\\.trigger\\tmp\\build-Axkwmy\\esm-RPN3OIEW.mjs.map": "aSgryE2T3ck",
+    "C:\\Users\\SHREYAS URADE\\Desktop\\Project Folder\\Galaxy.ai\\weavy-clone\\.trigger\\tmp\\build-Axkwmy\\esm-Y4WS42OM.mjs": "3etOuFhnrBo",
+    "C:\\Users\\SHREYAS URADE\\Desktop\\Project Folder\\Galaxy.ai\\weavy-clone\\.trigger\\tmp\\build-Axkwmy\\esm-Y4WS42OM.mjs.map": "VON93E1In1A",
+    "C:\\Users\\SHREYAS URADE\\Desktop\\Project Folder\\Galaxy.ai\\weavy-clone\\.trigger\\tmp\\build-Axkwmy\\fileFromPath-36YZYERO.mjs": "epsa6QIxpR4",
+    "C:\\Users\\SHREYAS URADE\\Desktop\\Project Folder\\Galaxy.ai\\weavy-clone\\.trigger\\tmp\\build-Axkwmy\\fileFromPath-36YZYERO.mjs.map": "8uQp1oQ23lM",
+    "C:\\Users\\SHREYAS URADE\\Desktop\\Project Folder\\Galaxy.ai\\weavy-clone\\.trigger\\tmp\\build-Axkwmy\\getMachineId-bsd-GMU5MSVV.mjs": "cnaE+hCajTw",
+    "C:\\Users\\SHREYAS URADE\\Desktop\\Project Folder\\Galaxy.ai\\weavy-clone\\.trigger\\tmp\\build-Axkwmy\\getMachineId-bsd-GMU5MSVV.mjs.map": "VMBe3PC9NEA",
+    "C:\\Users\\SHREYAS URADE\\Desktop\\Project Folder\\Galaxy.ai\\weavy-clone\\.trigger\\tmp\\build-Axkwmy\\getMachineId-darwin-DWK7OBSQ.mjs": "JFdz+h+AtKQ",
+    "C:\\Users\\SHREYAS URADE\\Desktop\\Project Folder\\Galaxy.ai\\weavy-clone\\.trigger\\tmp\\build-Axkwmy\\getMachineId-darwin-DWK7OBSQ.mjs.map": "a3w4uCc/h2k",
+    "C:\\Users\\SHREYAS URADE\\Desktop\\Project Folder\\Galaxy.ai\\weavy-clone\\.trigger\\tmp\\build-Axkwmy\\getMachineId-linux-TFPHH63R.mjs": "N6MDMjDOl4I",
+    "C:\\Users\\SHREYAS URADE\\Desktop\\Project Folder\\Galaxy.ai\\weavy-clone\\.trigger\\tmp\\build-Axkwmy\\getMachineId-linux-TFPHH63R.mjs.map": "Tvbt7HWoATQ",
+    "C:\\Users\\SHREYAS URADE\\Desktop\\Project Folder\\Galaxy.ai\\weavy-clone\\.trigger\\tmp\\build-Axkwmy\\getMachineId-unsupported-GDB4GCKL.mjs": "z5EJPHwztUQ",
+    "C:\\Users\\SHREYAS URADE\\Desktop\\Project Folder\\Galaxy.ai\\weavy-clone\\.trigger\\tmp\\build-Axkwmy\\getMachineId-unsupported-GDB4GCKL.mjs.map": "psNm6WHF8qE",
+    "C:\\Users\\SHREYAS URADE\\Desktop\\Project Folder\\Galaxy.ai\\weavy-clone\\.trigger\\tmp\\build-Axkwmy\\getMachineId-win-2C2J73KT.mjs": "mpQi4o3dud8",
+    "C:\\Users\\SHREYAS URADE\\Desktop\\Project Folder\\Galaxy.ai\\weavy-clone\\.trigger\\tmp\\build-Axkwmy\\getMachineId-win-2C2J73KT.mjs.map": "vHkdW7od7No",
+    "C:\\Users\\SHREYAS URADE\\Desktop\\Project Folder\\Galaxy.ai\\weavy-clone\\.trigger\\tmp\\build-Axkwmy\\groq-sdk-JII64UJG.mjs": "Ekny6JpWOTA",
+    "C:\\Users\\SHREYAS URADE\\Desktop\\Project Folder\\Galaxy.ai\\weavy-clone\\.trigger\\tmp\\build-Axkwmy\\groq-sdk-JII64UJG.mjs.map": "Mnb27liiqtw",
+    "C:\\Users\\SHREYAS URADE\\Desktop\\Project Folder\\Galaxy.ai\\weavy-clone\\.trigger\\tmp\\build-Axkwmy\\s2s-JQHU7VSN.mjs": "JrWv+yvqsV0",
+    "C:\\Users\\SHREYAS URADE\\Desktop\\Project Folder\\Galaxy.ai\\weavy-clone\\.trigger\\tmp\\build-Axkwmy\\s2s-JQHU7VSN.mjs.map": "U8nWcnfsMJI"
+  },
+  "outputPath": "C:\\Users\\SHREYAS URADE\\Desktop\\Project Folder\\Galaxy.ai\\weavy-clone\\.trigger\\tmp\\build-Axkwmy",
+  "packageVersion": "4.4.1",
+  "runWorkerEntryPoint": "C:\\Users\\SHREYAS URADE\\Desktop\\Project Folder\\Galaxy.ai\\weavy-clone\\.trigger\\tmp\\build-Axkwmy\\AppData\\Local\\npm-cache\\_npx\\f51a09bd0abf5f10\\node_modules\\trigger.dev\\dist\\esm\\entryPoints\\dev-run-worker.mjs",
+  "runtime": "node",
+  "sources": {
+    "package.json": {
+      "contentHash": "4e5f7f44785a549a02f0b20c404b6d09",
+      "contents": "eJx9VMt22yAU3PsrOFoHhGRbjr3qopv+hHswXCvECFRA8iMn/96DwJLcON2Jmfua4aKPBUKZZg1kO5SdgfVXzJXRkL0EogfrpNGBo6QgNKKtlT3zIcPbDgbIcStb77Id+lgghFAmoA9ZGi4ehe+XCB86qcRIxFOinGfWj1Q8JUpJPTDghq+EeivrGuwutUpHzJWcd2yN81I7z5QKUa2VrmGoBg02aFgg9DkoENCCFqC5hJmMH1yBPeVhpPcAZ/uKLDfJiMDXxtQK8lRP9oCZHOIoKVekGONi35wrCVHLviLFlpRjQBqfCOhzJ04hZEWWZDkGXK5HZc65BcZjgaIkBZ1GEcaD7iOzIeWUebSsAYsb49NV7ouCFK9T79qaPzj13NMHfbJpwI45U03VcSkAT8NQsq6WU14wLOBFRQpS3dExPCifig0wFlrERhWhk3Ejh998o9b4wPgJ/hdpmm8bWNPewmoPucHc13H3jNZJZ0ko2dzxrpOp1ZLMrL6ZiIYao7hb5zxLk63DYHS+XP3P5/vlmVRnqQV3Lg+ryl1cs9W0GNcWXK6NiIOX9B9mthDbZ9Tdkq/0pI7O1R3YARRuVVdLHW8Yc9O0UkWHinlsepGhyPYRw9zoo6zx802Iz+HJO5j58ejD7H18eRuDnOEPFN2fjH/MSqaDFq2R2v8S8Y9g3n9b4brLVdjb5WLsm7pqfRRDlcXn4i9GpF2h"
+    },
+    "src/trigger/index.ts": {
+      "contentHash": "7c7319f58ced4a33e72b2b1a2cd0e135",
+      "contents": "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"
+    },
+    "trigger.config.ts": {
+      "contentHash": "9831550853106809d283ac701a30964d",
+      "contents": "eJxlUU1Lw0AQvQfyH4Y9KYQmmtv2othLQW/eRCRmZ+PqfoTZ2ZBa8t+lmmhb5zKPN+/NPBjj+kAMe1Cojce74LXpYAJNwYG4YTJdh7RSOJRRfZRDLdZ5lmc4ftsU6iZZPjFf7PMMAKCn8I4tSxAH9EIqpnGn6HMcA73ZnfdaieJHSsmzcShB+KBwYW3o7nFAK0HY0C2sa8ZNooZN8BLqqlpWIJPBKGG+fij0zatFtfUbHCQwJSz+hnP0E8O8/5YZXc9RQl2cDY1/NA5D4q1/iBKuqt8AR/5/knONbloOJOH6iJ9mvHRlKEp4EqsyUlvOfxDPRZ5Nl+s8+wJRCXmH"
+    },
+    "tsconfig.json": {
+      "contentHash": "ee17fd1c97c735e9f3564e3f5251f125",
+      "contents": "eJxtUU1Lw0AQvedXLHMMbaJehJ4E6cFiEfRYimyyQ7t2v9id1EjJf5fdJNVET8O8N2/2vdlLxhjUVjup0L84ktYEWLFLxhhjQNwfkGDFYP12d3N7D4seV7KCFduBsBoWLJZCEnpeKYw9BoMtwX6Y5krZz01cS77BAQwn6Z5l9XjE+jRjyMuappixay1nGIatFY3CJ0PorZuSOlHR+WBmgr9isKqJYeNE1Rih0I8jPpJn3ARrtuOWX5tlsIoTip6bpfoIbdzokde0jM0oMrVHjYa4mgqcag4ynXyXADacvk/NdYqQAgxwl+p4Wsfp+PNfjMFDmaefKcrg6zKHfTaKuiiJRlQj8Ppe2r1Ecy5EQWG0m+dl/re9pimiqKQvh6GcjfaUwPP/dGo1hZgmZQBsr4bAWIHverjrPuuyb0p5toA="
+    }
+  },
+  "target": "dev"
+}

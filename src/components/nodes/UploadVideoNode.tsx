@@ -102,13 +102,17 @@ function UploadVideoNodeComponent({ id, data, selected }: NodeProps) {
         throw new Error('No upload result found in Transloadit response');
     };
 
+    const [pendingFile, setPendingFile] = useState<File | null>(null);
+
     const onDrop = useCallback(async (acceptedFiles: File[]) => {
         if (acceptedFiles.length === 0 || nodeData.isLocked) return;
         const file = acceptedFiles[0];
+        setPendingFile(file);
         setIsUploading(true);
         try {
             const videoUrl = await uploadToTransloadit(file);
             updateNodeData(id, { videoUrl, fileName: file.name, output: videoUrl, status: 'success', error: undefined });
+            setPendingFile(null);
         } catch (error) {
             console.error('Upload to server failed:', error);
             // Use blob URL for local preview only — do NOT set as output
@@ -124,6 +128,25 @@ function UploadVideoNodeComponent({ id, data, selected }: NodeProps) {
             setIsUploading(false);
         }
     }, [id, updateNodeData, nodeData.isLocked]);
+
+    const retryUpload = useCallback(async () => {
+        if (!pendingFile) return;
+        setIsUploading(true);
+        updateNodeData(id, { status: 'running', error: undefined });
+        try {
+            const videoUrl = await uploadToTransloadit(pendingFile);
+            updateNodeData(id, { videoUrl, fileName: pendingFile.name, output: videoUrl, status: 'success', error: undefined });
+            setPendingFile(null);
+        } catch (error) {
+            console.error('[Upload] Retry failed:', error);
+            updateNodeData(id, {
+                status: 'error',
+                error: error instanceof Error ? error.message : 'Upload failed — please try again.',
+            });
+        } finally {
+            setIsUploading(false);
+        }
+    }, [pendingFile, id, updateNodeData]);
 
     const { getRootProps, getInputProps, isDragActive } = useDropzone({
         onDrop,
@@ -212,7 +235,18 @@ function UploadVideoNodeComponent({ id, data, selected }: NodeProps) {
                                     className="block max-h-[600px] w-auto h-auto object-contain"
                                     preload="metadata"
                                 />
-                                {!nodeData.isLocked && (
+                                {nodeData.status === 'error' && pendingFile && (
+                                    <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center gap-2 z-20">
+                                        <p className="text-red-400 text-xs px-4 text-center">{nodeData.error || 'Upload failed'}</p>
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); retryUpload(); }}
+                                            className="px-3 py-1.5 bg-[#C084FC] text-white text-xs rounded-md hover:bg-[#A855F7] transition-colors"
+                                        >
+                                            Retry Upload
+                                        </button>
+                                    </div>
+                                )}
+                                {!nodeData.isLocked && nodeData.status !== 'error' && (
                                     <div className="absolute top-2 right-2 opacity-0 group-hover/video:opacity-100 transition-opacity z-10">
                                         <button
                                             onClick={clearVideo}

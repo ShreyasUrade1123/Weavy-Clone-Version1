@@ -21,6 +21,13 @@ function shouldSkipTriggerDev(): boolean {
     return process.env.SKIP_TRIGGER_DEV === 'true';
 }
 
+// Smart URL detection: prefers explicit env var, then Vercel auto-set var, then localhost
+function getBaseUrl(): string {
+    if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL;
+    if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+    return 'http://localhost:3000';
+}
+
 export async function POST(request: NextRequest) {
     try {
         const { userId } = await auth();
@@ -634,7 +641,7 @@ async function executeCropImage(node: Node, inputs: Record<string, unknown>): Pr
 
     console.log('[executeCropImage] Crop params:', { xPercent, yPercent, widthPercent, heightPercent });
 
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const baseUrl = getBaseUrl();
     console.log('[executeCropImage] Calling /api/process at', baseUrl);
 
     const response = await fetch(`${baseUrl}/api/process`, {
@@ -686,7 +693,7 @@ async function executeExtractFrame(node: Node, inputs: Record<string, unknown>):
         timestampSeconds = parseFloat(timestampStr) || 0;
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const baseUrl = getBaseUrl();
 
     const response = await fetch(`${baseUrl}/api/process`, {
         method: 'POST',

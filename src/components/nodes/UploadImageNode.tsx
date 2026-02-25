@@ -148,9 +148,12 @@ function UploadImageNodeComponent({ id, data, selected }: NodeProps) {
         throw new Error('No upload result found in Transloadit response');
     };
 
+    const [pendingFile, setPendingFile] = useState<File | null>(null);
+
     const onDrop = useCallback(async (acceptedFiles: File[]) => {
         if (acceptedFiles.length === 0 || nodeData.isLocked) return;
         const file = acceptedFiles[0];
+        setPendingFile(file);
         setIsUploading(true);
 
         // Show a preview immediately while uploading
@@ -161,6 +164,7 @@ function UploadImageNodeComponent({ id, data, selected }: NodeProps) {
             const imageUrl = await uploadToTransloadit(file);
             console.log('[Upload] Success! Setting final URL:', imageUrl);
             updateNodeData(id, { imageUrl, fileName: file.name, output: imageUrl, status: 'success', error: undefined });
+            setPendingFile(null);
         } catch (error) {
             console.error('[Upload] Upload failed:', error);
             // Keep preview but mark as error
@@ -175,6 +179,25 @@ function UploadImageNodeComponent({ id, data, selected }: NodeProps) {
             setIsUploading(false);
         }
     }, [nodeData.isLocked, id, updateNodeData]);
+
+    const retryUpload = useCallback(async () => {
+        if (!pendingFile) return;
+        setIsUploading(true);
+        updateNodeData(id, { status: 'running', error: undefined });
+        try {
+            const imageUrl = await uploadToTransloadit(pendingFile);
+            updateNodeData(id, { imageUrl, fileName: pendingFile.name, output: imageUrl, status: 'success', error: undefined });
+            setPendingFile(null);
+        } catch (error) {
+            console.error('[Upload] Retry failed:', error);
+            updateNodeData(id, {
+                status: 'error',
+                error: error instanceof Error ? error.message : 'Upload failed — please try again.',
+            });
+        } finally {
+            setIsUploading(false);
+        }
+    }, [pendingFile, id, updateNodeData]);
 
     const { getRootProps, getInputProps, isDragActive } = useDropzone({
         onDrop,
@@ -259,7 +282,18 @@ function UploadImageNodeComponent({ id, data, selected }: NodeProps) {
                                     alt={nodeData.fileName}
                                     className="w-full h-full object-cover"
                                 />
-                                {!nodeData.isLocked && (
+                                {nodeData.status === 'error' && pendingFile && (
+                                    <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center gap-2 z-10">
+                                        <p className="text-red-400 text-xs px-4 text-center">{nodeData.error || 'Upload failed'}</p>
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); retryUpload(); }}
+                                            className="px-3 py-1.5 bg-[#C084FC] text-white text-xs rounded-md hover:bg-[#A855F7] transition-colors"
+                                        >
+                                            Retry Upload
+                                        </button>
+                                    </div>
+                                )}
+                                {!nodeData.isLocked && nodeData.status !== 'error' && (
                                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/image:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
                                         {/* Using pointer-events-auto on button to capture click through overlay */}
                                         <button
