@@ -126,6 +126,16 @@ function WorkflowCanvasInner() {
 
             const result = await response.json();
 
+            // If the server resolved a 'temp' workflowId to a real one, update the store
+            // so HistorySidebar can find runs under the correct workflow ID
+            if (result.workflowId && result.workflowId !== workflowId) {
+                const { setWorkflow } = useWorkflowStore.getState();
+                const currentState = useWorkflowStore.getState();
+                setWorkflow(result.workflowId, currentState.workflowName, currentState.nodes, currentState.edges);
+                // Update the browser URL to reflect the real workflow ID
+                window.history.replaceState(null, '', `/workflows/${result.workflowId}`);
+            }
+
             // Update node statuses based on results
             result.results?.forEach((nodeResult: { nodeId: string; status: string; output?: unknown; error?: string }) => {
                 const node = nodes.find(n => n.id === nodeResult.nodeId);

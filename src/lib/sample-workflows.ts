@@ -50,6 +50,7 @@ export const PRODUCT_MARKETING_KIT: WorkflowTemplate = {
             data: {
                 label: 'Upload Product Photo',
                 imageUrl: assetUrl('/Zeb-Duke-pic-1.webp'),
+                output: assetUrl('/Zeb-Duke-pic-1.webp'),
                 fileName: 'Zeb-Duke-pic-1.webp',
                 status: 'idle',
             } as WorkflowNodeData,
@@ -116,6 +117,7 @@ export const PRODUCT_MARKETING_KIT: WorkflowTemplate = {
             data: {
                 label: 'Upload Product Demo Video',
                 videoUrl: assetUrl('/Product_Demo_Video_Generated.mp4'),
+                output: assetUrl('/Product_Demo_Video_Generated.mp4'),
                 fileName: 'Product_Demo_Video_Generated.mp4',
                 status: 'idle',
             } as WorkflowNodeData,

@@ -33,6 +33,7 @@ export function WorkflowHeader({ workflowId, onRun, onSave }: WorkflowHeaderProp
     // Using store state
     const workflowName = useWorkflowStore((state) => state.workflowName);
     const setWorkflowName = useWorkflowStore((state) => state.setWorkflowName);
+    const storeWorkflowId = useWorkflowStore((state) => state.workflowId);
     const { nodes, edges, setNodes, setEdges } = useWorkflowStore();
     const { toggleHistory, isHistoryOpen } = useUIStore();
 
@@ -129,7 +130,7 @@ export function WorkflowHeader({ workflowId, onRun, onSave }: WorkflowHeaderProp
                 <div className="flex items-start gap-4 pointer-events-auto" style={{ fontFamily: 'var(--font-dm-sans)' }}>
                     {/* Task Manager Panel */}
                     <HistorySidebar
-                        workflowId={workflowId}
+                        workflowId={workflowId || storeWorkflowId || undefined}
                         isOpen={isHistoryOpen}
                         onClose={toggleHistory}
                     />
