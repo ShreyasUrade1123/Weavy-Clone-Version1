@@ -102,21 +102,30 @@ export async function POST(request: NextRequest) {
             // Extract frame using /video/thumbs robot
             const { timestamp = 0 } = options;
 
+            // Build thumbnail step config
+            // Use count:1 for timestamp 0 (more reliable than offsets:[0] because
+            // Transloadit silently ignores out-of-range offsets when the video
+            // has no keyframe at exactly 0 seconds).
+            const thumbnailStep: Record<string, unknown> = {
+                robot: '/video/thumbs',
+                use: 'imported',
+                ffmpeg_stack: 'v6.0.0',
+                format: 'png',
+                result: true,
+            };
+
+            if (timestamp > 0) {
+                thumbnailStep.offsets = [timestamp];
+            } else {
+                thumbnailStep.count = 1;
+            }
+
             steps = {
                 imported: {
                     robot: '/http/import',
                     url: fileUrl,
                 },
-                thumbnail: {
-                    robot: '/video/thumbs',
-                    use: 'imported',
-                    offsets: [timestamp],
-                    width: 1280,
-                    height: 720,
-                    resize_strategy: 'fit',
-                    format: 'png',
-                    result: true,
-                },
+                thumbnail: thumbnailStep,
             };
         } else {
             return NextResponse.json(

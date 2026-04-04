@@ -47,3 +47,38 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         );
     }
 }
+
+// DELETE /api/workflows/[id]/runs - Clear all workflow runs
+export async function DELETE(request: NextRequest, { params }: RouteParams) {
+    try {
+        const { userId } = await auth();
+        const { id } = await params;
+
+        if (!userId) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        const user = await prisma.user.findUnique({
+            where: { clerkId: userId },
+        });
+
+        if (!user) {
+            return NextResponse.json({ error: 'User not found' }, { status: 404 });
+        }
+
+        await prisma.workflowRun.deleteMany({
+            where: {
+                workflowId: id,
+                userId: user.id,
+            },
+        });
+
+        return NextResponse.json({ success: true });
+    } catch (error) {
+        console.error('Failed to delete runs:', error);
+        return NextResponse.json(
+            { error: 'Failed to delete runs' },
+            { status: 500 }
+        );
+    }
+}

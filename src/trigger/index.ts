@@ -260,39 +260,55 @@ export const extractFrameTask = task({
         timestamp?: number;
         format?: string;
     }) => {
-        console.log(`[Extract Frame] Processing: ${payload.videoUrl.substring(0, 60)}...`);
-        console.log(`[Extract Frame] Timestamp: ${payload.timestamp || 0}s, Format: ${payload.format || 'png'}`);
+        console.log(`[Extract Frame] Processing: ${payload.videoUrl.substring(0, 100)}...`);
+        console.log(`[Extract Frame] Timestamp: ${payload.timestamp ?? 'not set'}, Format: ${payload.format || 'png'}`);
+
+        if (payload.videoUrl.startsWith('blob:') || payload.videoUrl.startsWith('data:')) {
+            throw new Error('Invalid Video URL: blob: and data: URLs cannot be accessed by the server. Please ensure the video is fully uploaded before running the workflow.');
+        }
 
         const timestamp = payload.timestamp || 0;
 
-        if (payload.videoUrl.startsWith('blob:')) {
-            throw new Error('Invalid Video URL: The video url is a local blob (blob:...), which cannot be accessed by the server. Please ensure the video is fully uploaded before running the workflow.');
+        // Build thumbnail step - use count:1 for timestamp 0 (much more reliable
+        // than offsets:[0] because Transloadit silently ignores out-of-range offsets,
+        // which can happen when the video has no keyframe at exactly 0s).
+        // For specific non-zero timestamps, use offsets.
+        const thumbnailStep: Record<string, unknown> = {
+            robot: '/video/thumbs',
+            use: 'imported',
+            ffmpeg_stack: 'v6.0.0',
+            format: payload.format || 'png',
+            result: true,
+        };
+
+        if (timestamp > 0) {
+            thumbnailStep.offsets = [timestamp];
+        } else {
+            thumbnailStep.count = 1;
         }
+
         const steps: Record<string, unknown> = {
             imported: {
                 robot: '/http/import',
                 url: payload.videoUrl,
             },
-            thumbnail: {
-                robot: '/video/thumbs',
-                use: 'imported',
-                offsets: [timestamp],
-                width: 1920,
-                height: 1080,
-                resize_strategy: 'fit',
-                format: payload.format || 'png',
-                result: true,
-            },
+            thumbnail: thumbnailStep,
         };
 
+        console.log(`[Extract Frame] Assembly steps:`, JSON.stringify(steps, null, 2));
+
         const result = await runTransloaditAssembly(steps);
-        const frameUrl = result.results.thumbnail?.[0]?.ssl_url;
+
+        console.log(`[Extract Frame] Assembly completed. Result keys:`, Object.keys(result.results || {}));
+
+        const frameUrl = result.results?.thumbnail?.[0]?.ssl_url;
 
         if (!frameUrl) {
-            throw new Error('No frame extracted from video');
+            console.error(`[Extract Frame] No thumbnail produced. Full results:`, JSON.stringify(result.results));
+            throw new Error('No frame extracted from video — the Transloadit assembly produced no thumbnails.');
         }
 
-        console.log(`[Extract Frame] Success: ${frameUrl.substring(0, 60)}...`);
+        console.log(`[Extract Frame] Success: ${frameUrl.substring(0, 80)}...`);
         return { frameUrl };
     },
 });
