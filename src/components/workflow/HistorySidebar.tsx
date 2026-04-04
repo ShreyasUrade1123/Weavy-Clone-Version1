@@ -89,6 +89,18 @@ export function HistorySidebar({ workflowId, isOpen, onClose }: HistorySidebarPr
         return () => clearInterval(interval);
     }, [workflowId, isExecuting, isOpen]); // Re-fetch when sidebar opens or execution state changes
 
+    const toggleExpand = (runId: string) => {
+        setExpandedRuns(prev => {
+            const next = new Set(prev);
+            if (next.has(runId)) {
+                next.delete(runId);
+            } else {
+                next.add(runId);
+            }
+            return next;
+        });
+    };
+
     const handleClearAll = async () => {
         if (!workflowId || workflowId === 'new') return;
         try {
@@ -120,15 +132,15 @@ export function HistorySidebar({ workflowId, isOpen, onClose }: HistorySidebarPr
     if (!isOpen) return null;
 
     return (
-        <div className="w-[380px] bg-[#1E1E21] border border-[#2C2C2E] rounded-2xl flex flex-col max-h-[600px] shadow-2xl overflow-hidden pointer-events-auto" style={{ fontFamily: 'var(--font-dm-mono)' }}>
+        <div className="w-[380px] bg-[#1E1E21] border border-[#2C2C2E] rounded-lg flex flex-col max-h-[600px] shadow-2xl overflow-hidden pointer-events-auto" style={{ fontFamily: 'var(--font-dm-sans)', fontSize: '9pt', fontWeight: 400 }}>
             {/* Header */}
-            <div className="flex items-center justify-between p-4 px-5 border-b border-[#2A2A2D]">
-                <h2 className="text-[14px] font-normal text-[#E5E5E5] tracking-wide">Task manager</h2>
+            <div className="flex items-center justify-between p-5 px-5 pb-2.5 border-b border-[#2A2A2D]">
+                <h2 className="text-[12px] font-normal text-[#E5E5E5] tracking-wide" style={{ fontFamily: 'var(--font-dm-mono)' }}>Task manager</h2>
                 <div className="flex items-center gap-5">
                     {runs.length > 0 && (
-                        <button 
+                        <button
                             onClick={handleClearAll}
-                            className="text-[14px] font-normal text-white hover:text-gray-300 transition-colors"
+                            className="text-[9pt] font-normal text-white hover:text-gray-300 transition-colors"
                         >
                             Clear all
                         </button>
@@ -149,49 +161,87 @@ export function HistorySidebar({ workflowId, isOpen, onClose }: HistorySidebarPr
                         <Loader2 className="w-5 h-5 text-gray-500 animate-spin" />
                     </div>
                 ) : runs.length === 0 ? (
-                    <div className="p-4 text-gray-500 text-[14px] text-center">
+                    <div className="p-4 text-gray-500 text-[9pt] text-center">
                         No active tasks
                     </div>
                 ) : (
                     <div className="space-y-1">
                         {runs.map((run) => (
-                            <div 
-                                key={run.id} 
-                                className="group relative flex items-center justify-between px-3 py-3 rounded-xl hover:bg-[#2A2A2D] cursor-default transition-colors"
-                            >
-                                <div className="flex items-center gap-4">
-                                    {run.status === 'SUCCESS' ? (
-                                        <CheckCircle className="w-[18px] h-[18px] text-white" strokeWidth={1.5} />
-                                    ) : run.status === 'FAILED' ? (
-                                        <XCircle className="w-[18px] h-[18px] text-[#EF9192]" strokeWidth={1.5} />
-                                    ) : run.status === 'RUNNING' ? (
-                                        <Loader2 className="w-[18px] h-[18px] text-[#A855F7] animate-spin" strokeWidth={1.5} />
-                                    ) : (
-                                        <Circle className="w-[18px] h-[18px] text-[#828282]" strokeWidth={1.5} />
-                                    )}
-                                    <span className="text-[14px] text-[#E5E5E5] font-normal tracking-wide">
-                                        Run #{run.id.slice(-8)}
-                                    </span>
+                            <div key={run.id} className="flex flex-col space-y-1">
+                                <div
+                                    onClick={() => toggleExpand(run.id)}
+                                    className="group relative flex items-center justify-between px-3 py-3 rounded-xl hover:bg-[#2A2A2D] cursor-pointer transition-colors"
+                                >
+                                    <div className="flex items-center gap-4">
+                                        <button className="text-[#828282] hover:text-white transition-colors focus:outline-none">
+                                            {expandedRuns.has(run.id) ? (
+                                                <ChevronDown className="w-[16px] h-[16px]" strokeWidth={1.5} />
+                                            ) : (
+                                                <ChevronRight className="w-[16px] h-[16px]" strokeWidth={1.5} />
+                                            )}
+                                        </button>
+                                        {run.status === 'SUCCESS' ? (
+                                            <CheckCircle className="w-[18px] h-[18px] text-white" strokeWidth={1.5} />
+                                        ) : run.status === 'FAILED' ? (
+                                            <XCircle className="w-[18px] h-[18px] text-[#EF9192]" strokeWidth={1.5} />
+                                        ) : run.status === 'RUNNING' ? (
+                                            <Loader2 className="w-[18px] h-[18px] text-[#A855F7] animate-spin" strokeWidth={1.5} />
+                                        ) : (
+                                            <Circle className="w-[18px] h-[18px] text-[#828282]" strokeWidth={1.5} />
+                                        )}
+                                        <div className="flex flex-col">
+                                            <span className="text-[9pt] text-[#E5E5E5] font-normal tracking-wide">
+                                                Run #{run.id.slice(-8)}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center">
+                                        <span className={`text-[9pt] font-normal capitalize tracking-wide transition-colors ${run.status === 'SUCCESS' ? 'text-[#828282]' :
+                                            run.status === 'FAILED' ? 'text-[#EF9192]' :
+                                                run.status === 'PARTIAL' ? 'text-[#828282]' :
+                                                    run.status === 'RUNNING' ? 'text-[#E5E5E5]' : 'text-[#828282]'
+                                            }`}>
+                                            {run.status.toLowerCase()}
+                                        </span>
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleDeleteRun(run.id);
+                                            }}
+                                            className="hidden group-hover:block ml-6 text-[9pt] font-normal text-white hover:text-gray-300 transition-colors"
+                                        >
+                                            Clear
+                                        </button>
+                                    </div>
                                 </div>
-                                <div className="flex items-center">
-                                    <span className={`text-[14px] font-normal capitalize tracking-wide transition-colors ${
-                                        run.status === 'SUCCESS' ? 'text-[#828282]' :
-                                        run.status === 'FAILED' ? 'text-[#EF9192]' :
-                                        run.status === 'PARTIAL' ? 'text-[#828282]' :
-                                        run.status === 'RUNNING' ? 'text-[#E5E5E5]' : 'text-[#828282]'
-                                    }`}>
-                                        {run.status.toLowerCase()}
-                                    </span>
-                                    <button 
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleDeleteRun(run.id);
-                                        }}
-                                        className="hidden group-hover:block ml-6 text-[14px] font-normal text-white hover:text-gray-300 transition-colors"
-                                    >
-                                        Clear
-                                    </button>
-                                </div>
+                                {expandedRuns.has(run.id) && run.nodeResults && run.nodeResults.length > 0 && (
+                                    <div className="pl-[52px] pr-3 py-1 space-y-2 mb-2">
+                                        {run.nodeResults.map((node) => (
+                                            <div key={node.id} className="flex items-center justify-between">
+                                                <div className="flex items-center gap-3">
+                                                    {node.status === 'SUCCESS' ? (
+                                                        <CheckCircle className="w-[14px] h-[14px] text-white" strokeWidth={1.5} />
+                                                    ) : node.status === 'FAILED' ? (
+                                                        <XCircle className="w-[14px] h-[14px] text-[#EF9192]" strokeWidth={1.5} />
+                                                    ) : node.status === 'RUNNING' ? (
+                                                        <Loader2 className="w-[14px] h-[14px] text-[#A855F7] animate-spin" strokeWidth={1.5} />
+                                                    ) : (
+                                                        <Circle className="w-[14px] h-[14px] text-[#828282]" strokeWidth={1.5} />
+                                                    )}
+                                                    <span className="text-[12px] text-[#A0A0A0] capitalize font-medium">
+                                                        {node.nodeType.replace(/([A-Z])/g, ' $1').trim()}
+                                                    </span>
+                                                </div>
+                                                {node.duration !== undefined && node.duration > 0 && (
+                                                    <span className="text-[12px] text-[#6B7280] flex items-center gap-1.5 font-medium">
+                                                        <Clock className="w-3 h-3" />
+                                                        {(node.duration / 1000).toFixed(1)}s
+                                                    </span>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         ))}
                     </div>
