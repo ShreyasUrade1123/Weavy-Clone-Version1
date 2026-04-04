@@ -24,6 +24,7 @@ import { isValidConnection as validateConnection } from '@/lib/workflow-engine/v
 import { NodeType } from '@/types/nodes';
 import FloatingToolbar from '@/components/workflow/FloatingToolbar';
 import { ContextConnectionMenu } from '@/components/workflow/ContextConnectionMenu';
+import { toast } from 'sonner';
 
 function WorkflowCanvasInner() {
     const reactFlowWrapper = useRef<HTMLDivElement>(null);
@@ -96,7 +97,9 @@ function WorkflowCanvasInner() {
 
     // Handle workflow execution
     const handleRun = useCallback(async (scope: 'full' | 'selected' | 'single') => {
+        const { setExecuting } = useWorkflowStore.getState();
         setIsExecuting(true);
+        setExecuting(true); // global store flag — drives HistorySidebar polling
 
         // Set all nodes to running state
         const nodesToRun = scope === 'full' ? nodes : nodes.filter(n => selectedNodeIds.includes(n.id));
@@ -125,22 +128,37 @@ function WorkflowCanvasInner() {
 
             // Update node statuses based on results
             result.results?.forEach((nodeResult: { nodeId: string; status: string; output?: unknown; error?: string }) => {
-                updateNodeData(nodeResult.nodeId, {
+                const node = nodes.find(n => n.id === nodeResult.nodeId);
+                const updateData: Record<string, unknown> = {
                     status: nodeResult.status === 'SUCCESS' ? 'success' : 'error',
                     output: nodeResult.output,
                     error: nodeResult.error,
-                });
+                };
+                // LLM nodes display `response`, not `output`
+                if (node?.type === 'llm' && nodeResult.output !== undefined) {
+                    updateData.response = nodeResult.output as string;
+                }
+                updateNodeData(nodeResult.nodeId, updateData);
             });
 
             console.log('Execution completed:', result);
+
+            const failCount = result.results?.filter((r: { status: string }) => r.status !== 'SUCCESS').length ?? 0;
+            if (failCount === 0) {
+                toast.success(`Workflow completed in ${(result.duration / 1000).toFixed(1)}s`);
+            } else {
+                toast.warning(`Completed with ${failCount} failed node(s)`);
+            }
         } catch (error) {
             console.error('Execution error:', error);
+            toast.error('Workflow execution failed');
             // Reset all nodes to error state
             nodesToRun.forEach(node => {
                 updateNodeData(node.id, { status: 'error' });
             });
         } finally {
             setIsExecuting(false);
+            setExecuting(false);
         }
     }, [workflowId, nodes, edges, selectedNodeIds, updateNodeData]);
 

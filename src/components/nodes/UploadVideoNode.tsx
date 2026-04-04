@@ -24,6 +24,8 @@ function UploadVideoNodeComponent({ id, data, selected }: NodeProps) {
     // Derived state
     const isExecuting = nodeData.status === 'running';
     const [isUploading, setIsUploading] = useState(false);
+    // Local blob preview URL — never persisted to store, only used during active upload session
+    const [localPreviewUrl, setLocalPreviewUrl] = useState<string | null>(null);
 
     // UI State
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -109,18 +111,26 @@ function UploadVideoNodeComponent({ id, data, selected }: NodeProps) {
         const file = acceptedFiles[0];
         setPendingFile(file);
         setIsUploading(true);
+
+        // Show a local blob preview immediately — stored in component state ONLY, never in Zustand
+        // This prevents stale blob: URLs from being persisted to localStorage and breaking on reload
+        const previewUrl = URL.createObjectURL(file);
+        setLocalPreviewUrl(previewUrl);
+        updateNodeData(id, { fileName: file.name, status: 'running' });
+
         try {
             const videoUrl = await uploadToTransloadit(file);
+            // Clear local preview and write the permanent Transloadit CDN URL to the store
+            setLocalPreviewUrl(null);
+            URL.revokeObjectURL(previewUrl);
             updateNodeData(id, { videoUrl, fileName: file.name, output: videoUrl, status: 'success', error: undefined });
             setPendingFile(null);
         } catch (error) {
             console.error('Upload to server failed:', error);
-            // Use blob URL for local preview only — do NOT set as output
-            const localUrl = URL.createObjectURL(file);
+            // Keep blob preview in local state for display, but do NOT write it to the store
             updateNodeData(id, {
-                videoUrl: localUrl,
                 fileName: file.name,
-                output: undefined, // Don't pass blob: URLs to downstream nodes
+                output: undefined,
                 status: 'error',
                 error: 'Upload failed — video is preview-only. Please try uploading again or paste a direct URL.',
             });
@@ -167,7 +177,7 @@ function UploadVideoNodeComponent({ id, data, selected }: NodeProps) {
                 className={`
                     group relative rounded-xl shadow-2xl transition-all duration-200
                     ${selected ? 'bg-[#2B2B2F] ring-2 ring-inset ring-[#333337]' : 'bg-[#212126]'}
-                    ${isExecuting ? 'ring-2 ring-[#C084FC]/50 node-executing' : ''}
+                    ${isExecuting ? 'ring-2 ring-[#F7FFA8]/50 node-executing' : ''}
                     ${nodeData.status === 'error' ? 'ring-2 ring-red-500' : ''}
                     ${nodeData.videoUrl ? 'min-w-[300px] max-w-[600px] w-fit' : 'min-w-[460px] w-[460px]'}
                 `}
@@ -221,16 +231,21 @@ function UploadVideoNodeComponent({ id, data, selected }: NodeProps) {
                             />
                         )}
 
-                        {/* Content States */}
-                        {isUploading ? (
+                        {/* displayUrl: use local blob preview during upload/error, then Transloadit CDN URL */}
+                        {(() => {
+                            const displayUrl = localPreviewUrl || nodeData.videoUrl;
+                            return isUploading ? (
                             <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#212126]">
-                                <Loader2 className="w-8 h-8 text-[#C084FC] animate-spin mb-3" />
-                                <p className="text-sm text-gray-400">Uploading...</p>
+                                {localPreviewUrl && (
+                                    <video src={localPreviewUrl} className="absolute inset-0 w-full h-full object-cover opacity-30" />
+                                )}
+                                <Loader2 className="w-8 h-8 text-[#C084FC] animate-spin mb-3 relative z-10" />
+                                <p className="text-sm text-gray-400 relative z-10">Uploading to Transloadit...</p>
                             </div>
-                        ) : nodeData.videoUrl ? (
+                        ) : displayUrl ? (
                             <div className="relative group/video bg-black flex items-center justify-center min-h-[200px]">
                                 <video
-                                    src={nodeData.videoUrl}
+                                    src={displayUrl}
                                     controls
                                     className="block max-h-[600px] w-auto h-auto object-contain"
                                     preload="metadata"
@@ -272,7 +287,8 @@ function UploadVideoNodeComponent({ id, data, selected }: NodeProps) {
                                     {isDragActive ? 'Drop video here' : 'Drag & drop or click to upload'}
                                 </p>
                             </div>
-                        )}
+                        );
+                        })()}
                     </div>
 
                     {/* Footer Input */}

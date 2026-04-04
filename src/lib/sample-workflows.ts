@@ -1,6 +1,20 @@
 import { Node, Edge } from '@xyflow/react';
 import { WorkflowNodeData } from '@/types/nodes';
 
+/**
+ * Resolve a relative asset path to an absolute URL so server-side
+ * processors (Transloadit, Trigger.dev, Groq, Gemini) can fetch it.
+ */
+function assetUrl(path: string): string {
+    // Already absolute
+    if (path.startsWith('http://') || path.startsWith('https://')) return path;
+    const base =
+        typeof window !== 'undefined'
+            ? window.location.origin
+            : process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    return `${base}${path.startsWith('/') ? '' : '/'}${path}`;
+}
+
 export interface WorkflowTemplate {
     id: string;
     name: string;
@@ -35,7 +49,7 @@ export const PRODUCT_MARKETING_KIT: WorkflowTemplate = {
             position: { x: 160, y: 896 },
             data: {
                 label: 'Upload Product Photo',
-                imageUrl: '/Zeb-Duke-pic-1.webp',
+                imageUrl: assetUrl('/Zeb-Duke-pic-1.webp'),
                 fileName: 'Zeb-Duke-pic-1.webp',
                 status: 'idle',
             } as WorkflowNodeData,
@@ -101,7 +115,7 @@ export const PRODUCT_MARKETING_KIT: WorkflowTemplate = {
             position: { x: 416, y: 1808 },
             data: {
                 label: 'Upload Product Demo Video',
-                videoUrl: '/Product_Demo_Video_Generated.mp4',
+                videoUrl: assetUrl('/Product_Demo_Video_Generated.mp4'),
                 fileName: 'Product_Demo_Video_Generated.mp4',
                 status: 'idle',
             } as WorkflowNodeData,

@@ -80,10 +80,25 @@ export async function POST(request: NextRequest) {
             nodesToExecute = nodes.filter((n: Node) => allNodeIds.has(n.id));
         }
 
+        // Resolve a valid workflow ID (Prisma requires a real FK)
+        let resolvedWorkflowId = workflowId;
+        if (!workflowId || workflowId === 'temp') {
+            // Create a transient workflow record so the run FK is satisfied
+            const tempWorkflow = await prisma.workflow.create({
+                data: {
+                    name: 'Untitled Workflow',
+                    nodes: nodes as object,
+                    edges: edges as object,
+                    userId: user.id,
+                },
+            });
+            resolvedWorkflowId = tempWorkflow.id;
+        }
+
         // Create workflow run record
         const run = await prisma.workflowRun.create({
             data: {
-                workflowId: workflowId !== 'temp' ? workflowId : undefined as unknown as string,
+                workflowId: resolvedWorkflowId,
                 userId: user.id,
                 scope,
                 status: 'RUNNING',
@@ -170,6 +185,10 @@ export async function POST(request: NextRequest) {
                             if (typeof output === 'string' && output.startsWith('blob:')) {
                                 throw new Error('Image upload incomplete: The image was not uploaded to the server. Please re-upload the image before running the workflow.');
                             }
+                            // Resolve relative paths to absolute URLs for server-side processing
+                            if (typeof output === 'string' && output.startsWith('/')) {
+                                output = `${getBaseUrl()}${output}`;
+                            }
                             break;
 
                         case 'uploadVideo':
@@ -177,6 +196,10 @@ export async function POST(request: NextRequest) {
                             if (!output) throw new Error('No video uploaded');
                             if (typeof output === 'string' && output.startsWith('blob:')) {
                                 throw new Error('Video upload incomplete: The video was not uploaded to the server. Please re-upload the video before running the workflow.');
+                            }
+                            // Resolve relative paths to absolute URLs for server-side processing
+                            if (typeof output === 'string' && output.startsWith('/')) {
+                                output = `${getBaseUrl()}${output}`;
                             }
                             break;
 
@@ -275,6 +298,7 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({
             runId: run.id,
+            workflowId: resolvedWorkflowId,
             status: finalStatus,
             results,
             duration: totalDuration,

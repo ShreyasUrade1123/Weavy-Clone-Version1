@@ -52,8 +52,8 @@ export function HistorySidebar({ workflowId, isOpen, onClose }: HistorySidebarPr
     runsRef.current = runs;
 
     useEffect(() => {
-        if (!workflowId || workflowId === 'new') {
-            setRuns([]);
+        if (!isOpen || !workflowId || workflowId === 'new') {
+            if (!workflowId || workflowId === 'new') setRuns([]);
             return;
         }
 
@@ -76,6 +76,7 @@ export function HistorySidebar({ workflowId, isOpen, onClose }: HistorySidebarPr
             }
         };
 
+        // Always fetch when opened or when execution state changes
         fetchRuns();
 
         const interval = setInterval(() => {
@@ -86,7 +87,7 @@ export function HistorySidebar({ workflowId, isOpen, onClose }: HistorySidebarPr
         }, 2000); // Poll more frequently (2s) when running
 
         return () => clearInterval(interval);
-    }, [workflowId, isExecuting]); // Re-setup interval when execution state changes
+    }, [workflowId, isExecuting, isOpen]); // Re-fetch when sidebar opens or execution state changes
 
     const toggleRun = (runId: string) => {
         setExpandedRuns(prev => {

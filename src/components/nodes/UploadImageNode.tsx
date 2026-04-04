@@ -24,6 +24,8 @@ function UploadImageNodeComponent({ id, data, selected }: NodeProps) {
     // Derived state
     const isExecuting = nodeData.status === 'running';
     const [isUploading, setIsUploading] = useState(false);
+    // Local blob preview URL — never persisted to store, only used during active upload
+    const [localPreviewUrl, setLocalPreviewUrl] = useState<string | null>(null);
 
     // UI State
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -156,22 +158,26 @@ function UploadImageNodeComponent({ id, data, selected }: NodeProps) {
         setPendingFile(file);
         setIsUploading(true);
 
-        // Show a preview immediately while uploading
+        // Show a local blob preview immediately — stored in component state ONLY, never in Zustand
+        // This prevents stale blob: URLs from being persisted to localStorage and breaking on reload
         const previewUrl = URL.createObjectURL(file);
-        updateNodeData(id, { imageUrl: previewUrl, fileName: file.name, status: 'running' });
+        setLocalPreviewUrl(previewUrl);
+        updateNodeData(id, { fileName: file.name, status: 'running' });
 
         try {
             const imageUrl = await uploadToTransloadit(file);
-            console.log('[Upload] Success! Setting final URL:', imageUrl);
+            console.log('[Upload] Success! Setting final Transloadit URL:', imageUrl);
+            // Clear local preview and write the permanent Transloadit CDN URL to the store
+            setLocalPreviewUrl(null);
+            URL.revokeObjectURL(previewUrl);
             updateNodeData(id, { imageUrl, fileName: file.name, output: imageUrl, status: 'success', error: undefined });
             setPendingFile(null);
         } catch (error) {
             console.error('[Upload] Upload failed:', error);
-            // Keep preview but mark as error
+            // Keep blob preview in local state for display, but do NOT write it to the store
             updateNodeData(id, {
-                imageUrl: previewUrl,
                 fileName: file.name,
-                output: undefined, // Don't pass blob: URLs to downstream nodes
+                output: undefined,
                 status: 'error',
                 error: error instanceof Error ? error.message : 'Upload failed — please try again.',
             });
@@ -218,7 +224,7 @@ function UploadImageNodeComponent({ id, data, selected }: NodeProps) {
                 className={`
                     group relative rounded-xl min-w-[460px] shadow-2xl transition-all duration-200
                     ${selected ? 'bg-[#2B2B2F] ring-2 ring-inset ring-[#333337]' : 'bg-[#212126]'}
-                    ${isExecuting ? 'ring-2 ring-[#C084FC]/50 node-executing' : ''}
+                    ${isExecuting ? 'ring-2 ring-[#F7FFA8]/50 node-executing' : ''}
                     ${nodeData.status === 'error' ? 'ring-2 ring-red-500' : ''}
                 `}
             >
@@ -270,15 +276,21 @@ function UploadImageNodeComponent({ id, data, selected }: NodeProps) {
                         )}
 
                         {/* Content States */}
-                        {isUploading ? (
+                        {/* displayUrl: use local blob preview during upload, then fallback to persisted Transloadit URL */}
+                        {(() => {
+                            const displayUrl = localPreviewUrl || nodeData.imageUrl;
+                            return isUploading ? (
                             <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#212126]">
-                                <Loader2 className="w-8 h-8 text-[#C084FC] animate-spin mb-3" />
-                                <p className="text-sm text-gray-400">Uploading...</p>
+                                {localPreviewUrl && (
+                                    <img src={localPreviewUrl} alt="preview" className="absolute inset-0 w-full h-full object-cover opacity-40" />
+                                )}
+                                <Loader2 className="w-8 h-8 text-[#C084FC] animate-spin mb-3 relative z-10" />
+                                <p className="text-sm text-gray-400 relative z-10">Uploading to Transloadit...</p>
                             </div>
-                        ) : nodeData.imageUrl ? (
+                        ) : displayUrl ? (
                             <div className="relative w-full h-full group/image">
                                 <img
-                                    src={nodeData.imageUrl}
+                                    src={displayUrl}
                                     alt={nodeData.fileName}
                                     className="w-full h-full object-cover"
                                 />
@@ -295,7 +307,6 @@ function UploadImageNodeComponent({ id, data, selected }: NodeProps) {
                                 )}
                                 {!nodeData.isLocked && nodeData.status !== 'error' && (
                                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/image:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
-                                        {/* Using pointer-events-auto on button to capture click through overlay */}
                                         <button
                                             onClick={clearImage}
                                             className="p-2 bg-black/50 text-white rounded-full hover:bg-black/80 transition-colors pointer-events-auto"
@@ -320,7 +331,8 @@ function UploadImageNodeComponent({ id, data, selected }: NodeProps) {
                                     {isDragActive ? 'Drop file here' : 'Drag & drop or click to upload'}
                                 </p>
                             </div>
-                        )}
+                        );
+                        })()} 
                     </div>
 
                     {/* Footer Input */}

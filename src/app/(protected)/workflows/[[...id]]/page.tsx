@@ -10,6 +10,7 @@ import PropertiesSidebar from '@/components/workflow/Sidebar/PropertiesSidebar';
 import { useWorkflowStore } from '@/stores/workflow-store';
 import { useUIStore } from '@/stores/ui-store';
 import { ChevronDown } from 'lucide-react';
+import { toast } from 'sonner';
 
 export default function WorkflowEditorPage() {
     const params = useParams();
@@ -99,7 +100,10 @@ export default function WorkflowEditorPage() {
 
     // Handle workflow run
     const handleRun = useCallback(async (scope: 'full' | 'selected' | 'single') => {
-        const selectedNodeIds = useWorkflowStore.getState().selectedNodeIds;
+        const { selectedNodeIds, setExecuting } = useWorkflowStore.getState();
+
+        // Signal to the store that execution is in progress (drives HistorySidebar polling)
+        setExecuting(true);
 
         // Set all nodes to running
         const nodesToRun = scope === 'full'
@@ -146,12 +150,22 @@ export default function WorkflowEditorPage() {
                     }
                 }
             });
+
+            const failCount = result.results?.filter((r: { status: string }) => r.status !== 'SUCCESS').length ?? 0;
+            if (failCount === 0) {
+                toast.success(`Workflow completed in ${(result.duration / 1000).toFixed(1)}s`);
+            } else {
+                toast.warning(`Completed with ${failCount} failed node(s)`);
+            }
         } catch (error) {
             console.error('Workflow execution failed:', error);
+            toast.error('Workflow execution failed');
             // Set all running nodes to error
             nodesToRun.forEach(node => {
                 setNodeStatus(node.id, 'error', undefined, 'Execution failed');
             });
+        } finally {
+            setExecuting(false);
         }
     }, [workflowId, nodes, edges, setNodeStatus, updateNodeData]);
 

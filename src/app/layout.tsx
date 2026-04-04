@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, DM_Sans, DM_Mono } from "next/font/google";
 import localFont from "next/font/local";
 import { ClerkProvider } from "@clerk/nextjs";
+import { Toaster } from "sonner";
 import "./globals.css";
 
 const inter = Inter({
@@ -44,6 +45,12 @@ export default function RootLayout({
           suppressHydrationWarning
         >
           {children}
+          <Toaster
+            theme="dark"
+            position="bottom-right"
+            richColors
+            closeButton
+          />
         </body>
       </html>
     </ClerkProvider>
