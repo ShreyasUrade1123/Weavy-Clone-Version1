@@ -301,11 +301,40 @@ export const extractFrameTask = task({
 
         console.log(`[Extract Frame] Assembly completed. Result keys:`, Object.keys(result.results || {}));
 
-        const frameUrl = result.results?.thumbnail?.[0]?.ssl_url;
+        // Check if import step produced any files (helps diagnose URL fetch issues)
+        const importedFiles = result.results?.imported;
+        if (importedFiles && importedFiles.length > 0) {
+            console.log(`[Extract Frame] Imported file: ${importedFiles[0].name}, url: ${importedFiles[0].ssl_url?.substring(0, 80)}`);
+        } else {
+            console.warn(`[Extract Frame] WARNING: /http/import produced no files — the video URL may be inaccessible (auth redirect, 404, etc.)`);
+        }
+
+        let frameUrl = result.results?.thumbnail?.[0]?.ssl_url;
+
+        // Fallback: if specific offset produced nothing, retry with count:1
+        if (!frameUrl && timestamp > 0) {
+            console.warn(`[Extract Frame] Offset ${timestamp}s produced no thumbnail. Retrying with count:1 fallback...`);
+            const fallbackSteps = {
+                imported: { robot: '/http/import' as const, url: payload.videoUrl },
+                thumbnail: {
+                    robot: '/video/thumbs' as const,
+                    use: 'imported' as const,
+                    ffmpeg_stack: 'v6.0.0',
+                    count: 1,
+                    format: payload.format || 'png',
+                    result: true,
+                },
+            };
+            const fallbackResult = await runTransloaditAssembly(fallbackSteps);
+            frameUrl = fallbackResult.results?.thumbnail?.[0]?.ssl_url;
+        }
 
         if (!frameUrl) {
             console.error(`[Extract Frame] No thumbnail produced. Full results:`, JSON.stringify(result.results));
-            throw new Error('No frame extracted from video — the Transloadit assembly produced no thumbnails.');
+            throw new Error(
+                'No frame extracted from video — the Transloadit assembly produced no thumbnails. ' +
+                'This usually means the video URL is inaccessible (behind auth, 404, or redirected to an HTML page).'
+            );
         }
 
         console.log(`[Extract Frame] Success: ${frameUrl.substring(0, 80)}...`);
