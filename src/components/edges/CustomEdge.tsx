@@ -6,7 +6,7 @@ import {
     getBezierPath,
 } from '@xyflow/react';
 import { useWorkflowStore } from '@/stores/workflow-store';
-import { CONNECTOR_COLORS } from '@/lib/connector-colors';
+import { CONNECTOR_COLORS, getEdgeColor } from '@/lib/connector-colors';
 
 function CustomEdgeComponent({
     id,
@@ -20,8 +20,16 @@ function CustomEdgeComponent({
     targetPosition,
     data,
     selected,
+    sourceHandleId,
 }: EdgeProps) {
-    const edgeColor = (data?.color as string) || CONNECTOR_COLORS.pink;
+    // Derive color from source node type when data.color is not set (e.g. template edges)
+    const derivedColor = useWorkflowStore((s) => {
+        if (data?.color) return data.color as string;
+        const sourceNode = s.nodes.find((n) => n.id === source);
+        if (sourceNode?.type) return getEdgeColor(sourceNode.type, sourceHandleId || 'output');
+        return CONNECTOR_COLORS.pink;
+    });
+    const edgeColor = derivedColor;
     const selectedEdgeId = useWorkflowStore((s) => s.selectedEdgeId);
     const setSelectedEdgeId = useWorkflowStore((s) => s.setSelectedEdgeId);
     const isSelected = selected || selectedEdgeId === id;
