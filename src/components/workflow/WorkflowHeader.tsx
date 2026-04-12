@@ -171,13 +171,13 @@ export function WorkflowHeader({ workflowId, onRun, onSave }: WorkflowHeaderProp
                             </div>
                         </div>
 
-                        {/* Row 2: Tasks Dropdown + Import/Export */}
+                        {/* Row 2: History Dropdown + Import/Export */}
                         <div className="flex items-center justify-between px-2">
                             <button
                                 onClick={toggleHistory}
                                 className={`flex items-center gap-1 text-gray-400 hover:text-white transition-colors group ${isHistoryOpen ? 'text-white' : ''}`}
                             >
-                                <span className="text-[12px] font-normal leading-none">Tasks</span>
+                                <span className="text-[12px] font-normal leading-none">History</span>
                                 <ChevronDown className={`w-3.5 h-3.5 text-gray-500 group-hover:text-gray-300 transition-colors ${isHistoryOpen ? 'rotate-180' : ''}`} />
                             </button>
 
