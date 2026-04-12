@@ -142,10 +142,6 @@ export const NODE_CONFIG: Record<NodeType, NodeConfig> = {
     icon: 'Crop',
     inputs: [
       { id: 'image_url', type: 'image', label: 'Image', required: true },
-      { id: 'x_percent', type: 'text', label: 'X %' },
-      { id: 'y_percent', type: 'text', label: 'Y %' },
-      { id: 'width_percent', type: 'text', label: 'Width %' },
-      { id: 'height_percent', type: 'text', label: 'Height %' },
     ],
     outputs: [{ id: 'output', type: 'image', label: 'Cropped Image' }],
   },

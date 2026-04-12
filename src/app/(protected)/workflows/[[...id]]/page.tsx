@@ -98,21 +98,38 @@ export default function WorkflowEditorPage() {
         return () => clearTimeout(timer);
     }, [nodes, edges, workflowName, isLoaded, saveWorkflow]);
 
-    // Handle workflow run
+    // Handle workflow run — only currently-executing nodes get the pulsating effect
     const handleRun = useCallback(async (scope: 'full' | 'selected' | 'single') => {
         const { selectedNodeIds, setExecuting } = useWorkflowStore.getState();
 
         // Signal to the store that execution is in progress (drives HistorySidebar polling)
         setExecuting(true);
 
-        // Set all nodes to running
+        // Determine which nodes will run
         const nodesToRun = scope === 'full'
             ? nodes
             : nodes.filter(n => selectedNodeIds.includes(n.id));
 
+        // Compute topological layers so we can simulate progressive execution
+        const { topologicalSort } = await import('@/lib/workflow-engine/validation');
+        const layers = topologicalSort(nodesToRun as any, edges);
+
+        // Reset ALL node statuses to idle before starting
         nodesToRun.forEach(node => {
-            setNodeStatus(node.id, 'running');
+            setNodeStatus(node.id, 'idle');
+            updateNodeData(node.id, { output: undefined, error: undefined });
         });
+
+        // Set only the FIRST layer of nodes to 'running' — the rest stay idle
+        const firstLayerIds = new Set(layers[0] || []);
+        nodesToRun.forEach(node => {
+            if (firstLayerIds.has(node.id)) {
+                setNodeStatus(node.id, 'running');
+            }
+        });
+
+        // Track resolved workflowId for history
+        let resolvedWorkflowId = workflowId;
 
         try {
             const response = await fetch('/api/workflows/execute', {
@@ -133,23 +150,60 @@ export default function WorkflowEditorPage() {
 
             const result = await response.json();
 
-            // Update node statuses based on results
-            result.results?.forEach((nodeResult: { nodeId: string; status: string; output?: unknown; error?: string }) => {
-                const status = nodeResult.status === 'SUCCESS' ? 'success' : 'error';
-                setNodeStatus(nodeResult.nodeId, status, nodeResult.output, nodeResult.error);
+            // If the server resolved a 'temp' workflowId to a real one, update
+            if (result.workflowId && result.workflowId !== workflowId) {
+                resolvedWorkflowId = result.workflowId;
+                setWorkflow(result.workflowId, workflowName, nodes, edges);
+                window.history.replaceState(null, '', `/workflows/${result.workflowId}`);
+            }
 
-                // Update node data with output/response
-                if (nodeResult.output !== undefined) {
-                    const node = nodes.find(n => n.id === nodeResult.nodeId);
-                    if (node) {
-                        if (node.type === 'llm') {
-                            updateNodeData(nodeResult.nodeId, { response: nodeResult.output as string });
-                        } else {
-                            updateNodeData(nodeResult.nodeId, { output: nodeResult.output });
+            // Build result map
+            const resultMap = new Map<string, { status: string; output?: unknown; error?: string }>();
+            result.results?.forEach((nodeResult: { nodeId: string; status: string; output?: unknown; error?: string }) => {
+                resultMap.set(nodeResult.nodeId, nodeResult);
+            });
+
+            // Apply results LAYER BY LAYER with progressive pulsation
+            for (let layerIdx = 0; layerIdx < layers.length; layerIdx++) {
+                const layer = layers[layerIdx];
+
+                // If this isn't the first layer, mark current layer as running (pulsating)
+                if (layerIdx > 0) {
+                    for (const nodeId of layer) {
+                        setNodeStatus(nodeId, 'running');
+                    }
+                    // Wait so user can see pulsation
+                    await new Promise(resolve => setTimeout(resolve, 800));
+                }
+
+                // Apply actual results for this layer
+                for (const nodeId of layer) {
+                    const nodeResult = resultMap.get(nodeId);
+                    if (nodeResult) {
+                        const status = nodeResult.status === 'SUCCESS' ? 'success' : 'error';
+                        setNodeStatus(nodeId, status as any, nodeResult.output, nodeResult.error);
+
+                        // Update node data with output/response
+                        if (nodeResult.output !== undefined) {
+                            const node = nodes.find(n => n.id === nodeId);
+                            if (node) {
+                                if (node.type === 'llm') {
+                                    updateNodeData(nodeId, { response: nodeResult.output as string, output: nodeResult.output });
+                                } else if (node.type === 'cropImage' || node.type === 'extractFrame') {
+                                    updateNodeData(nodeId, { output: nodeResult.output, croppedUrl: nodeResult.output as string });
+                                } else {
+                                    updateNodeData(nodeId, { output: nodeResult.output });
+                                }
+                            }
                         }
                     }
                 }
-            });
+
+                // Brief pause between layers for visual feedback
+                if (layerIdx < layers.length - 1) {
+                    await new Promise(resolve => setTimeout(resolve, 400));
+                }
+            }
 
             const failCount = result.results?.filter((r: { status: string }) => r.status !== 'SUCCESS').length ?? 0;
             if (failCount === 0) {
@@ -157,6 +211,9 @@ export default function WorkflowEditorPage() {
             } else {
                 toast.warning(`Completed with ${failCount} failed node(s)`);
             }
+
+            // Auto-open history sidebar after run completes
+            setHistoryOpen(true);
         } catch (error) {
             console.error('Workflow execution failed:', error);
             toast.error('Workflow execution failed');
@@ -167,7 +224,7 @@ export default function WorkflowEditorPage() {
         } finally {
             setExecuting(false);
         }
-    }, [workflowId, nodes, edges, setNodeStatus, updateNodeData]);
+    }, [workflowId, workflowName, nodes, edges, setNodeStatus, updateNodeData, setWorkflow, setHistoryOpen]);
 
     // Handle export
     const handleExport = useCallback(() => {

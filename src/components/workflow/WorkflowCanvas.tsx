@@ -101,10 +101,24 @@ function WorkflowCanvasInner() {
         setIsExecuting(true);
         setExecuting(true); // global store flag — drives HistorySidebar polling
 
-        // Set all nodes to running state
+        // Determine which nodes to run
         const nodesToRun = scope === 'full' ? nodes : nodes.filter(n => selectedNodeIds.includes(n.id));
+
+        // Compute topological layers for progressive pulsation
+        const { topologicalSort } = await import('@/lib/workflow-engine/validation');
+        const layers = topologicalSort(nodesToRun as any, edges);
+
+        // Reset ALL node statuses to idle before starting
         nodesToRun.forEach(node => {
-            updateNodeData(node.id, { status: 'running' });
+            updateNodeData(node.id, { status: 'idle', output: undefined, error: undefined });
+        });
+
+        // Mark ONLY the first layer as running (pulsating)
+        const firstLayerIds = new Set(layers[0] || []);
+        nodesToRun.forEach(node => {
+            if (firstLayerIds.has(node.id)) {
+                updateNodeData(node.id, { status: 'running' });
+            }
         });
 
         try {
@@ -127,29 +141,57 @@ function WorkflowCanvasInner() {
             const result = await response.json();
 
             // If the server resolved a 'temp' workflowId to a real one, update the store
-            // so HistorySidebar can find runs under the correct workflow ID
             if (result.workflowId && result.workflowId !== workflowId) {
                 const { setWorkflow } = useWorkflowStore.getState();
                 const currentState = useWorkflowStore.getState();
                 setWorkflow(result.workflowId, currentState.workflowName, currentState.nodes, currentState.edges);
-                // Update the browser URL to reflect the real workflow ID
                 window.history.replaceState(null, '', `/workflows/${result.workflowId}`);
             }
 
-            // Update node statuses based on results
-            result.results?.forEach((nodeResult: { nodeId: string; status: string; output?: unknown; error?: string }) => {
-                const node = nodes.find(n => n.id === nodeResult.nodeId);
-                const updateData: Record<string, unknown> = {
-                    status: nodeResult.status === 'SUCCESS' ? 'success' : 'error',
-                    output: nodeResult.output,
-                    error: nodeResult.error,
-                };
-                // LLM nodes display `response`, not `output`
-                if (node?.type === 'llm' && nodeResult.output !== undefined) {
-                    updateData.response = nodeResult.output as string;
-                }
-                updateNodeData(nodeResult.nodeId, updateData);
+            // Build result map
+            const resultMap = new Map<string, { nodeId: string; status: string; output?: unknown; error?: string; duration: number }>();
+            result.results?.forEach((nodeResult: { nodeId: string; status: string; output?: unknown; error?: string; duration: number }) => {
+                resultMap.set(nodeResult.nodeId, nodeResult);
             });
+
+            // Apply results LAYER BY LAYER with progressive pulsation
+            for (let layerIdx = 0; layerIdx < layers.length; layerIdx++) {
+                const layer = layers[layerIdx];
+
+                // If this isn't the first layer, mark current layer as running (pulsating)
+                if (layerIdx > 0) {
+                    for (const nodeId of layer) {
+                        updateNodeData(nodeId, { status: 'running' });
+                    }
+                    // Wait so user can see pulsation
+                    await new Promise(resolve => setTimeout(resolve, 800));
+                }
+
+                // Now apply actual results for this layer
+                for (const nodeId of layer) {
+                    const nodeResult = resultMap.get(nodeId);
+                    if (nodeResult) {
+                        const node = nodes.find(n => n.id === nodeResult.nodeId);
+                        const updateData: Record<string, unknown> = {
+                            status: nodeResult.status === 'SUCCESS' ? 'success' : 'error',
+                            output: nodeResult.output,
+                            error: nodeResult.error,
+                        };
+                        if (node?.type === 'llm' && nodeResult.output !== undefined) {
+                            updateData.response = nodeResult.output as string;
+                        }
+                        if ((node?.type === 'cropImage' || node?.type === 'extractFrame') && nodeResult.output !== undefined) {
+                            updateData.croppedUrl = nodeResult.output as string;
+                        }
+                        updateNodeData(nodeResult.nodeId, updateData);
+                    }
+                }
+
+                // Brief pause between layers for visual feedback
+                if (layerIdx < layers.length - 1) {
+                    await new Promise(resolve => setTimeout(resolve, 400));
+                }
+            }
 
             console.log('Execution completed:', result);
 

@@ -390,35 +390,36 @@ async function executeCropImageViaTrigger(
         return imageUrl;
     }
 
-    // Compute actual pixel crop coordinates from the node's dimension data
+    // Read crop parameters from node data (set via dynamic UI inputs on the node)
     const data = node.data as {
-        sourceWidth?: number;
-        sourceHeight?: number;
-        outputWidth?: number;
-        outputHeight?: number;
         xPercent?: number;
         yPercent?: number;
         widthPercent?: number;
         heightPercent?: number;
     };
 
-    const sourceW = data.sourceWidth || 1024;
-    const sourceH = data.sourceHeight || 1024;
-    const cropW = data.outputWidth || sourceW;
-    const cropH = data.outputHeight || sourceH;
+    const xPercent = data.xPercent ?? 0;
+    const yPercent = data.yPercent ?? 0;
+    const widthPercent = data.widthPercent ?? 100;
+    const heightPercent = data.heightPercent ?? 100;
 
-    // Center the crop within the source image
-    const x = Math.max(0, Math.round((sourceW - cropW) / 2));
-    const y = Math.max(0, Math.round((sourceH - cropH) / 2));
+    console.log(`[Crop] Params from node data: x=${xPercent}%, y=${yPercent}%, w=${widthPercent}%, h=${heightPercent}%`);
 
-    console.log(`[Crop] Source: ${sourceW}x${sourceH}, Crop: ${cropW}x${cropH}, Offset: (${x}, ${y})`);
+    // For Trigger.dev crop task, compute pixel values
+    // Use a default source size assumption; the actual crop robot will use the real image dimensions
+    const sourceW = 1024;
+    const sourceH = 1024;
+    const x = Math.round((xPercent / 100) * sourceW);
+    const y = Math.round((yPercent / 100) * sourceH);
+    const width = Math.round((widthPercent / 100) * sourceW);
+    const height = Math.round((heightPercent / 100) * sourceH);
 
     const payload = {
         imageUrl,
         x,
         y,
-        width: Math.min(cropW, sourceW),
-        height: Math.min(cropH, sourceH),
+        width: Math.min(width, sourceW),
+        height: Math.min(height, sourceH),
     };
 
     try {
