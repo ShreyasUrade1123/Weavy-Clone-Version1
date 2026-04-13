@@ -222,9 +222,14 @@ export function HistorySidebar({ workflowId, isOpen, onClose }: HistorySidebarPr
                     <div className="flex items-center justify-center py-8">
                         <Loader2 className="w-5 h-5 text-gray-500 animate-spin" />
                     </div>
+                ) : !effectiveWorkflowId || effectiveWorkflowId === 'new' ? (
+                    <div className="p-4 text-center">
+                        <p className="text-[9pt] text-[#6B7280]">No active workflow</p>
+                        <p className="text-[8pt] text-[#4B5563] mt-1">Save or run a workflow to see history here.</p>
+                    </div>
                 ) : runs.length === 0 ? (
                     <div className="p-4 text-gray-500 text-[9pt] text-center">
-                        No active tasks
+                        No runs yet — press Run to start.
                     </div>
                 ) : (
                     <div className="space-y-1">

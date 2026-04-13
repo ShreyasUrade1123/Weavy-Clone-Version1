@@ -74,6 +74,7 @@ export interface ExtractFrameNodeData extends BaseNodeData {
   frameUrl?: string;
   frame?: number;
   timecode?: string;
+  videoDuration?: number; // total video duration in seconds, stored when video loads metadata
 }
 
 // Union type for all node data

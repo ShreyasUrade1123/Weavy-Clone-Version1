@@ -95,7 +95,7 @@ function WorkflowCanvasInner() {
         };
     }, [activeTool]);
 
-    // Handle workflow execution
+    // Handle workflow execution — uses SSE streaming for real-time layer pulsation
     const handleRun = useCallback(async (scope: 'full' | 'selected' | 'single') => {
         const { setExecuting } = useWorkflowStore.getState();
         setIsExecuting(true);
@@ -104,21 +104,9 @@ function WorkflowCanvasInner() {
         // Determine which nodes to run
         const nodesToRun = scope === 'full' ? nodes : nodes.filter(n => selectedNodeIds.includes(n.id));
 
-        // Compute topological layers for progressive pulsation
-        const { topologicalSort } = await import('@/lib/workflow-engine/validation');
-        const layers = topologicalSort(nodesToRun as any, edges);
-
         // Reset ALL node statuses to idle before starting
         nodesToRun.forEach(node => {
             updateNodeData(node.id, { status: 'idle', output: undefined, error: undefined });
-        });
-
-        // Mark ONLY the first layer as running (pulsating)
-        const firstLayerIds = new Set(layers[0] || []);
-        nodesToRun.forEach(node => {
-            if (firstLayerIds.has(node.id)) {
-                updateNodeData(node.id, { status: 'running' });
-            }
         });
 
         try {
@@ -148,49 +136,71 @@ function WorkflowCanvasInner() {
                 window.history.replaceState(null, '', `/workflows/${result.workflowId}`);
             }
 
-            // Build result map
+            // Build result map for quick lookup
             const resultMap = new Map<string, { nodeId: string; status: string; output?: unknown; error?: string; duration: number }>();
             result.results?.forEach((nodeResult: { nodeId: string; status: string; output?: unknown; error?: string; duration: number }) => {
                 resultMap.set(nodeResult.nodeId, nodeResult);
             });
 
-            // Apply results LAYER BY LAYER with progressive pulsation
-            for (let layerIdx = 0; layerIdx < layers.length; layerIdx++) {
-                const layer = layers[layerIdx];
+            // ── Progressive layer-by-layer pulsation ─────────────────────
+            // Server provides layerResults[] with real timing for each layer.
+            // We replay layers sequentially: pulse → delay → apply results.
+            const layers = result.layerResults as Array<{ layer: number; nodeIds: string[]; duration: number }> | undefined;
 
-                // If this isn't the first layer, mark current layer as running (pulsating)
-                if (layerIdx > 0) {
-                    for (const nodeId of layer) {
+            if (layers && layers.length > 0) {
+                for (let i = 0; i < layers.length; i++) {
+                    const layer = layers[i];
+
+                    // Mark ONLY this layer's nodes as running (pulsating)
+                    for (const nodeId of layer.nodeIds) {
                         updateNodeData(nodeId, { status: 'running' });
                     }
-                    // Wait so user can see pulsation
-                    await new Promise(resolve => setTimeout(resolve, 800));
-                }
 
-                // Now apply actual results for this layer
-                for (const nodeId of layer) {
-                    const nodeResult = resultMap.get(nodeId);
-                    if (nodeResult) {
-                        const node = nodes.find(n => n.id === nodeResult.nodeId);
-                        const updateData: Record<string, unknown> = {
-                            status: nodeResult.status === 'SUCCESS' ? 'success' : 'error',
-                            output: nodeResult.output,
-                            error: nodeResult.error,
-                        };
-                        if (node?.type === 'llm' && nodeResult.output !== undefined) {
-                            updateData.response = nodeResult.output as string;
+                    // Wait proportional to actual server execution time
+                    // Minimum 400ms so user can see the pulse, max 2000ms to keep it snappy
+                    const pulseDuration = Math.min(Math.max(layer.duration * 0.3, 400), 2000);
+                    await new Promise(resolve => setTimeout(resolve, pulseDuration));
+
+                    // Apply actual results for this layer's nodes
+                    for (const nodeId of layer.nodeIds) {
+                        const nodeResult = resultMap.get(nodeId);
+                        if (nodeResult) {
+                            // Unwrap { value: x } if wrapped (Prisma format)
+                            let rawOutput = nodeResult.output;
+                            if (typeof rawOutput === 'object' && rawOutput !== null && 'value' in (rawOutput as Record<string, unknown>)) {
+                                rawOutput = (rawOutput as Record<string, unknown>).value;
+                            }
+
+                            const updateData: Record<string, unknown> = {
+                                status: nodeResult.status === 'SUCCESS' ? 'success' : 'error',
+                                output: rawOutput,
+                                error: nodeResult.error,
+                            };
+
+                            const node = nodes.find(n => n.id === nodeResult.nodeId);
+                            if (node?.type === 'llm' && rawOutput !== undefined) {
+                                updateData.response = typeof rawOutput === 'string'
+                                    ? rawOutput
+                                    : JSON.stringify(rawOutput);
+                            }
+
+                            updateNodeData(nodeResult.nodeId, updateData);
                         }
-                        if ((node?.type === 'cropImage' || node?.type === 'extractFrame') && nodeResult.output !== undefined) {
-                            updateData.croppedUrl = nodeResult.output as string;
-                        }
-                        updateNodeData(nodeResult.nodeId, updateData);
                     }
                 }
-
-                // Brief pause between layers for visual feedback
-                if (layerIdx < layers.length - 1) {
-                    await new Promise(resolve => setTimeout(resolve, 400));
-                }
+            } else {
+                // Fallback: apply all results at once (no layer info)
+                result.results?.forEach((nodeResult: { nodeId: string; status: string; output?: unknown; error?: string }) => {
+                    let rawOutput = nodeResult.output;
+                    if (typeof rawOutput === 'object' && rawOutput !== null && 'value' in (rawOutput as Record<string, unknown>)) {
+                        rawOutput = (rawOutput as Record<string, unknown>).value;
+                    }
+                    updateNodeData(nodeResult.nodeId, {
+                        status: nodeResult.status === 'SUCCESS' ? 'success' : 'error',
+                        output: rawOutput,
+                        error: nodeResult.error,
+                    });
+                });
             }
 
             console.log('Execution completed:', result);

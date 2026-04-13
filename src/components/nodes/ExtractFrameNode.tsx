@@ -106,6 +106,14 @@ function ExtractFrameNodeComponent({ id, data, selected }: NodeProps) {
         setIsCaptured(true);
     }, [id, updateNodeData]);
 
+    // Store video duration when metadata is loaded — needed by the execute route
+    // to convert percentage timestamps (e.g. '50%') into actual seconds
+    const handleLoadedMetadata = useCallback(() => {
+        const video = videoRef.current;
+        if (!video || !isFinite(video.duration)) return;
+        updateNodeData(id, { videoDuration: video.duration });
+    }, [id, updateNodeData]);
+
     // Handle timestamp manual input change
     const handleTimestampChange = (value: string) => {
         updateNodeData(id, { timestamp: value });
@@ -288,6 +296,7 @@ function ExtractFrameNodeComponent({ id, data, selected }: NodeProps) {
                                     preload="metadata"
                                     onTimeUpdate={handleTimeUpdate}
                                     onPause={handlePause}
+                                    onLoadedMetadata={handleLoadedMetadata}
                                     crossOrigin="anonymous"
                                 />
                             </div>

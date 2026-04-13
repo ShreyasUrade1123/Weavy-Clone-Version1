@@ -100,12 +100,9 @@ export async function POST(request: NextRequest) {
             };
         } else if (type === 'frame') {
             // Extract frame using /video/thumbs robot
-            const { timestamp = 0 } = options;
+            const { timestamp = 0, timestampPercent } = options;
 
             // Build thumbnail step config
-            // Use count:1 for timestamp 0 (more reliable than offsets:[0] because
-            // Transloadit silently ignores out-of-range offsets when the video
-            // has no keyframe at exactly 0 seconds).
             const thumbnailStep: Record<string, unknown> = {
                 robot: '/video/thumbs',
                 use: 'imported',
@@ -114,7 +111,17 @@ export async function POST(request: NextRequest) {
                 result: true,
             };
 
-            if (timestamp > 0) {
+            // Determine the target frame index when using count-based approach
+            let targetFrameIndex = 0;
+
+            if (typeof timestampPercent === 'number' && timestampPercent >= 0) {
+                // Percentage-based extraction — generate evenly-spaced frames and pick the closest one
+                // count=21 gives frames at 0%, 5%, 10%, ..., 100%
+                const count = 21;
+                thumbnailStep.count = count;
+                targetFrameIndex = Math.min(Math.round(timestampPercent / 5), count - 1);
+                console.log(`[Process/Frame] Percentage mode: ${timestampPercent}% → count=${count}, targetIndex=${targetFrameIndex}`);
+            } else if (timestamp > 0) {
                 thumbnailStep.offsets = [timestamp];
             } else {
                 thumbnailStep.count = 1;
@@ -127,12 +134,22 @@ export async function POST(request: NextRequest) {
                 },
                 thumbnail: thumbnailStep,
             };
+
+            // Store targetFrameIndex for result extraction below
+            (steps as any)._targetFrameIndex = targetFrameIndex;
+            (steps as any)._isPercentageMode = typeof timestampPercent === 'number';
         } else {
             return NextResponse.json(
                 { error: 'Invalid type. Use "crop" or "frame"' },
                 { status: 400 }
             );
         }
+
+        // Extract internal metadata before sending to Transloadit
+        const targetFrameIndex = (steps as any)._targetFrameIndex ?? 0;
+        const isPercentageMode = (steps as any)._isPercentageMode ?? false;
+        delete (steps as any)._targetFrameIndex;
+        delete (steps as any)._isPercentageMode;
 
         const params: TransloaditParams = {
             auth: {
@@ -172,7 +189,15 @@ export async function POST(request: NextRequest) {
         if (type === 'crop' && result.results.cropped) {
             resultUrl = result.results.cropped[0]?.ssl_url;
         } else if (type === 'frame' && result.results.thumbnail) {
-            resultUrl = result.results.thumbnail[0]?.ssl_url;
+            const thumbnails = result.results.thumbnail;
+            if (isPercentageMode && thumbnails.length > 1) {
+                // Pick the frame at the target percentage index
+                const idx = Math.min(targetFrameIndex, thumbnails.length - 1);
+                resultUrl = thumbnails[idx]?.ssl_url;
+                console.log(`[Process/Frame] Percentage: picked frame ${idx}/${thumbnails.length} → ${resultUrl?.substring(0, 60)}`);
+            } else {
+                resultUrl = thumbnails[0]?.ssl_url;
+            }
         }
 
         if (!resultUrl) {

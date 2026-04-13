@@ -28,6 +28,99 @@ function getBaseUrl(): string {
     return 'http://localhost:3000';
 }
 
+// ────────────────────────────────────────────────────────────────
+// Dynamic image dimension probe (zero dependencies)
+// Fetches the image binary and parses the format header to extract
+// width × height.  Supports PNG, JPEG, WebP (VP8/VP8L/VP8X), GIF, BMP.
+// ────────────────────────────────────────────────────────────────
+async function probeImageDimensions(
+    url: string
+): Promise<{ width: number; height: number } | null> {
+    try {
+        console.log(`[probeImageDimensions] Fetching ${url.substring(0, 80)}…`);
+        const response = await fetch(url);
+        if (!response.ok) return null;
+        const buffer = Buffer.from(await response.arrayBuffer());
+        if (buffer.length < 30) return null;
+
+        // PNG — 8-byte magic + IHDR chunk at bytes 16..23
+        if (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4e && buffer[3] === 0x47) {
+            const w = buffer.readUInt32BE(16);
+            const h = buffer.readUInt32BE(20);
+            console.log(`[probeImageDimensions] PNG ${w}×${h}`);
+            return { width: w, height: h };
+        }
+
+        // GIF — "GIF87a" or "GIF89a"
+        if (buffer[0] === 0x47 && buffer[1] === 0x49 && buffer[2] === 0x46) {
+            const w = buffer.readUInt16LE(6);
+            const h = buffer.readUInt16LE(8);
+            console.log(`[probeImageDimensions] GIF ${w}×${h}`);
+            return { width: w, height: h };
+        }
+
+        // JPEG — scan for SOF0 (0xC0) or SOF2 (0xC2) marker
+        if (buffer[0] === 0xff && buffer[1] === 0xd8) {
+            let offset = 2;
+            while (offset < buffer.length - 9) {
+                if (buffer[offset] !== 0xff) { offset++; continue; }
+                const marker = buffer[offset + 1];
+                if (marker === 0xc0 || marker === 0xc2) {
+                    const h = buffer.readUInt16BE(offset + 5);
+                    const w = buffer.readUInt16BE(offset + 7);
+                    console.log(`[probeImageDimensions] JPEG ${w}×${h}`);
+                    return { width: w, height: h };
+                }
+                // skip segment
+                if (marker === 0xd9) break;               // EOI
+                if (marker >= 0xd0 && marker <= 0xd7) {    // RSTn (no length)
+                    offset += 2; continue;
+                }
+                const segLen = buffer.readUInt16BE(offset + 2);
+                offset += 2 + segLen;
+            }
+        }
+
+        // WebP — RIFF....WEBP container
+        if (buffer.toString('ascii', 0, 4) === 'RIFF' && buffer.toString('ascii', 8, 12) === 'WEBP') {
+            const fourCC = buffer.toString('ascii', 12, 16);
+            if (fourCC === 'VP8 ' && buffer.length >= 30) {
+                const w = buffer.readUInt16LE(26) & 0x3fff;
+                const h = buffer.readUInt16LE(28) & 0x3fff;
+                console.log(`[probeImageDimensions] WebP-VP8 ${w}×${h}`);
+                return { width: w, height: h };
+            }
+            if (fourCC === 'VP8L' && buffer.length >= 25) {
+                const bits = buffer.readUInt32LE(21);
+                const w = (bits & 0x3fff) + 1;
+                const h = ((bits >> 14) & 0x3fff) + 1;
+                console.log(`[probeImageDimensions] WebP-VP8L ${w}×${h}`);
+                return { width: w, height: h };
+            }
+            if (fourCC === 'VP8X' && buffer.length >= 30) {
+                const w = 1 + (buffer[24] | (buffer[25] << 8) | (buffer[26] << 16));
+                const h = 1 + (buffer[27] | (buffer[28] << 8) | (buffer[29] << 16));
+                console.log(`[probeImageDimensions] WebP-VP8X ${w}×${h}`);
+                return { width: w, height: h };
+            }
+        }
+
+        // BMP
+        if (buffer[0] === 0x42 && buffer[1] === 0x4d && buffer.length >= 26) {
+            const w = buffer.readInt32LE(18);
+            const h = Math.abs(buffer.readInt32LE(22));
+            console.log(`[probeImageDimensions] BMP ${w}×${h}`);
+            return { width: w, height: h };
+        }
+
+        console.warn('[probeImageDimensions] Unknown image format');
+        return null;
+    } catch (error) {
+        console.error('[probeImageDimensions] Probe failed:', error);
+        return null;
+    }
+}
+
 export async function POST(request: NextRequest) {
     try {
         const { userId } = await auth();
@@ -106,6 +199,13 @@ export async function POST(request: NextRequest) {
         });
 
         const startTime = Date.now();
+
+        // Get execution layers
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const executionLayers = topologicalSort(nodesToExecute as any, edges);
+
+        // Store outputs for reference
+        const nodeOutputs = new Map<string, unknown>();
         const results: Array<{
             nodeId: string;
             status: 'SUCCESS' | 'FAILED';
@@ -114,12 +214,12 @@ export async function POST(request: NextRequest) {
             duration: number;
         }> = [];
 
-        // Get execution layers
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const executionLayers = topologicalSort(nodesToExecute as any, edges);
-
-        // Store outputs for reference
-        const nodeOutputs = new Map<string, unknown>();
+        // Per-layer timing info — lets the client replay accurate pulsation
+        const layerResults: Array<{
+            layer: number;
+            nodeIds: string[];
+            duration: number; // how long this layer actually took on the server
+        }> = [];
 
         // Initialize outputs from existing node data
         nodes.forEach((node: Node) => {
@@ -128,8 +228,11 @@ export async function POST(request: NextRequest) {
             }
         });
 
-        // Execute layer by layer
-        for (const layer of executionLayers) {
+        // Execute layer by layer (nodes within each layer run in parallel)
+        for (let layerIdx = 0; layerIdx < executionLayers.length; layerIdx++) {
+            const layer = executionLayers[layerIdx];
+            const layerStartTime = Date.now();
+
             const layerPromises = layer.map(async (nodeId) => {
                 const node = nodes.find((n: Node) => n.id === nodeId);
                 if (!node) return;
@@ -185,7 +288,6 @@ export async function POST(request: NextRequest) {
                             if (typeof output === 'string' && output.startsWith('blob:')) {
                                 throw new Error('Image upload incomplete: The image was not uploaded to the server. Please re-upload the image before running the workflow.');
                             }
-                            // Resolve relative paths to absolute URLs for server-side processing
                             if (typeof output === 'string' && output.startsWith('/')) {
                                 output = `${getBaseUrl()}${output}`;
                             }
@@ -197,7 +299,6 @@ export async function POST(request: NextRequest) {
                             if (typeof output === 'string' && output.startsWith('blob:')) {
                                 throw new Error('Video upload incomplete: The video was not uploaded to the server. Please re-upload the video before running the workflow.');
                             }
-                            // Resolve relative paths to absolute URLs for server-side processing
                             if (typeof output === 'string' && output.startsWith('/')) {
                                 output = `${getBaseUrl()}${output}`;
                             }
@@ -233,10 +334,9 @@ export async function POST(request: NextRequest) {
 
                     // Store output
                     nodeOutputs.set(node.id, output);
-
                     const duration = Date.now() - nodeStartTime;
 
-                    // Update node result
+                    // Update DB
                     await prisma.nodeResult.update({
                         where: { id: nodeResult.id },
                         data: {
@@ -254,6 +354,7 @@ export async function POST(request: NextRequest) {
                         output,
                         duration,
                     });
+
                 } catch (error) {
                     const duration = Date.now() - nodeStartTime;
                     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -278,6 +379,13 @@ export async function POST(request: NextRequest) {
             });
 
             await Promise.all(layerPromises);
+
+            // Record per-layer timing
+            layerResults.push({
+                layer: layerIdx,
+                nodeIds: layer,
+                duration: Date.now() - layerStartTime,
+            });
         }
 
         // Determine final status
@@ -301,8 +409,10 @@ export async function POST(request: NextRequest) {
             workflowId: resolvedWorkflowId,
             status: finalStatus,
             results,
+            layerResults, // per-layer timing for accurate client-side pulsation replay
             duration: totalDuration,
         });
+
     } catch (error) {
         console.error('Failed to execute workflow:', error);
         return NextResponse.json(
@@ -405,14 +515,28 @@ async function executeCropImageViaTrigger(
 
     console.log(`[Crop] Params from node data: x=${xPercent}%, y=${yPercent}%, w=${widthPercent}%, h=${heightPercent}%`);
 
-    // For Trigger.dev crop task, compute pixel values
-    // Use a default source size assumption; the actual crop robot will use the real image dimensions
-    const sourceW = 1024;
-    const sourceH = 1024;
+    // For Trigger.dev crop task, compute pixel values from actual image dimensions
+    // First try to read dimensions stored by the CropImageNode UI
+    let sourceW = (data as any).sourceWidth || (data as any).sourceW || 0;
+    let sourceH = (data as any).sourceHeight || (data as any).sourceH || 0;
+
+    // If the frontend didn't store dimensions, dynamically probe the image
+    if (!sourceW || !sourceH) {
+        console.log('[Crop/Trigger] sourceWidth/sourceHeight not in node data — probing image dynamically…');
+        const probed = await probeImageDimensions(imageUrl);
+        if (probed) {
+            sourceW = probed.width;
+            sourceH = probed.height;
+        } else {
+            throw new Error('Unable to determine image dimensions for crop. The image URL may be inaccessible.');
+        }
+    }
+
     const x = Math.round((xPercent / 100) * sourceW);
     const y = Math.round((yPercent / 100) * sourceH);
     const width = Math.round((widthPercent / 100) * sourceW);
     const height = Math.round((heightPercent / 100) * sourceH);
+    console.log(`[Crop/Trigger] Source: ${sourceW}x${sourceH}, pixel crop: x=${x}, y=${y}, w=${width}, h=${height}`);
 
     const payload = {
         imageUrl,
@@ -457,8 +581,20 @@ async function executeExtractFrameViaTrigger(
     // Parse timestamp
     const timestampStr = (inputs['timestamp'] ?? (node.data as { timestamp?: string })?.timestamp ?? '0') as string;
     let timestampSeconds = 0;
+    let usePercentageFallback = false;
 
-    if (timestampStr.includes(':')) {
+    if (timestampStr.includes('%')) {
+        const pct = parseFloat(timestampStr) / 100;
+        const videoDuration = (node.data as any).videoDuration || (node.data as any).duration || 0;
+        if (videoDuration > 0) {
+            timestampSeconds = Math.round(pct * videoDuration);
+            console.log(`[Frame/Trigger] % timestamp: ${timestampStr} → ${timestampSeconds}s (duration=${videoDuration}s)`);
+        } else {
+            // No duration available — use percentage-based Transloadit count approach via direct execution
+            console.log(`[Frame/Trigger] % timestamp with no duration — falling back to count-based extraction`);
+            usePercentageFallback = true;
+        }
+    } else if (timestampStr.includes(':')) {
         const parts = timestampStr.split(':').map(Number);
         if (parts.length === 3) {
             timestampSeconds = parts[0] * 3600 + parts[1] * 60 + parts[2];
@@ -467,6 +603,11 @@ async function executeExtractFrameViaTrigger(
         }
     } else {
         timestampSeconds = parseFloat(timestampStr) || 0;
+    }
+
+    // If we can't resolve seconds, use the direct path with count-based percentage
+    if (usePercentageFallback) {
+        return executeExtractFrame(node, inputs);
     }
 
     const payload = {
@@ -664,7 +805,28 @@ async function executeCropImage(node: Node, inputs: Record<string, unknown>): Pr
     const widthPercent = inputs['width_percent'] ?? (node.data as { widthPercent?: number })?.widthPercent ?? 100;
     const heightPercent = inputs['height_percent'] ?? (node.data as { heightPercent?: number })?.heightPercent ?? 100;
 
-    console.log('[executeCropImage] Crop params:', { xPercent, yPercent, widthPercent, heightPercent });
+    // Read actual image dimensions — first try node data, then dynamically probe the image
+    let sourceW = (node.data as any).sourceWidth || (node.data as any).sourceW || 0;
+    let sourceH = (node.data as any).sourceHeight || (node.data as any).sourceH || 0;
+
+    if (!sourceW || !sourceH) {
+        console.log('[executeCropImage] sourceWidth/sourceHeight not in node data — probing image dynamically…');
+        const probed = await probeImageDimensions(imageUrl);
+        if (probed) {
+            sourceW = probed.width;
+            sourceH = probed.height;
+        } else {
+            throw new Error('Unable to determine image dimensions for crop. The image URL may be inaccessible.');
+        }
+    }
+
+    const xPx = Math.round((Number(xPercent) / 100) * sourceW);
+    const yPx = Math.round((Number(yPercent) / 100) * sourceH);
+    const wPx = Math.max(1, Math.round((Number(widthPercent) / 100) * sourceW));
+    const hPx = Math.max(1, Math.round((Number(heightPercent) / 100) * sourceH));
+
+    console.log('[executeCropImage] Crop params (%):', { xPercent, yPercent, widthPercent, heightPercent });
+    console.log(`[executeCropImage] Source: ${sourceW}x${sourceH} → pixels: x=${xPx}, y=${yPx}, w=${wPx}, h=${hPx}`);
 
     const baseUrl = getBaseUrl();
     console.log('[executeCropImage] Calling /api/process at', baseUrl);
@@ -675,10 +837,10 @@ async function executeCropImage(node: Node, inputs: Record<string, unknown>): Pr
         body: JSON.stringify({
             type: 'crop',
             fileUrl: imageUrl,
-            x: Number(xPercent),
-            y: Number(yPercent),
-            width: Number(widthPercent) || 100,
-            height: Number(heightPercent) || 100,
+            x: xPx,
+            y: yPx,
+            width: wPx,
+            height: hPx,
         }),
     });
 
@@ -702,11 +864,20 @@ async function executeExtractFrame(node: Node, inputs: Record<string, unknown>):
 
     // Parse timestamp
     const timestampStr = (inputs['timestamp'] ?? (node.data as { timestamp?: string })?.timestamp ?? '0') as string;
-    let timestampSeconds = 0;
+    let timestampSeconds: number | null = null;
+    let timestampPercent: number | null = null;
 
     if (timestampStr.includes('%')) {
-        // Percentage - default to 0 for now (would need video duration)
-        timestampSeconds = 0;
+        const pct = parseFloat(timestampStr) / 100;
+        const videoDuration = (node.data as any).videoDuration || (node.data as any).duration || 0;
+        if (videoDuration > 0) {
+            timestampSeconds = Math.round(pct * videoDuration);
+            console.log(`[Frame/Direct] % timestamp: ${timestampStr} → ${timestampSeconds}s (duration=${videoDuration}s)`);
+        } else {
+            // No duration — pass percentage to process route for count-based extraction
+            timestampPercent = parseFloat(timestampStr); // e.g. 50
+            console.log(`[Frame/Direct] % timestamp with no duration — using count-based extraction (${timestampPercent}%)`);
+        }
     } else if (timestampStr.includes(':')) {
         const parts = timestampStr.split(':').map(Number);
         if (parts.length === 3) {
@@ -720,14 +891,21 @@ async function executeExtractFrame(node: Node, inputs: Record<string, unknown>):
 
     const baseUrl = getBaseUrl();
 
+    // Build the request body — either seconds-based or percentage-based
+    const body: Record<string, unknown> = {
+        type: 'frame',
+        fileUrl: videoUrl,
+    };
+    if (timestampPercent !== null) {
+        body.timestampPercent = timestampPercent; // e.g. 50 → process route uses count-based approach
+    } else {
+        body.timestamp = timestampSeconds ?? 0;
+    }
+
     const response = await fetch(`${baseUrl}/api/process`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            type: 'frame',
-            fileUrl: videoUrl,
-            timestamp: timestampSeconds,
-        }),
+        body: JSON.stringify(body),
     });
 
     if (!response.ok) {
@@ -738,4 +916,5 @@ async function executeExtractFrame(node: Node, inputs: Record<string, unknown>):
     const result = await response.json();
     return result.resultUrl;
 }
+
 
