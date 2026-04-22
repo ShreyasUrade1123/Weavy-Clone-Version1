@@ -3,6 +3,7 @@ import { Inter, DM_Sans, DM_Mono } from "next/font/google";
 import localFont from "next/font/local";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Toaster } from "sonner";
+import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import "./globals.css";
 
 const inter = Inter({
@@ -39,14 +40,15 @@ export default function RootLayout({
 }>) {
   return (
     <ClerkProvider>
-      <html lang="en" className="dark" suppressHydrationWarning>
+      <html lang="en" suppressHydrationWarning>
         <body
-          className={`${inter.variable} ${dmSans.variable} ${dmRegular.variable} ${dmMono.variable} font-sans antialiased bg-gray-950 text-white`}
+          className={`${inter.variable} ${dmSans.variable} ${dmRegular.variable} ${dmMono.variable} font-sans antialiased bg-[var(--background)] text-[var(--foreground)] transition-colors duration-300`}
           suppressHydrationWarning
         >
-          {children}
+          <ThemeProvider>
+            {children}
+          </ThemeProvider>
           <Toaster
-            theme="dark"
             position="bottom-right"
             richColors
             closeButton

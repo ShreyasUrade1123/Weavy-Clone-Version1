@@ -593,9 +593,21 @@ function CropImageNodeComponent({ id, data, selected }: NodeProps) {
                             <div className="relative rounded-lg overflow-hidden bg-[#1A1A1D] border border-[#2C2C2E]">
                                 <img src={output} alt="Cropped result" className="w-full h-auto max-h-[200px] object-contain" />
                             </div>
-                            <p className="text-[11px] text-gray-500 truncate" title={output}>
-                                {output.substring(0, 60)}...
-                            </p>
+                            {output.startsWith('http') ? (
+                                <a
+                                    href={output}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-[11px] text-[#60A5FA] hover:text-[#93C5FD] break-all underline underline-offset-2 block"
+                                    onClick={(e) => e.stopPropagation()}
+                                >
+                                    {output}
+                                </a>
+                            ) : (
+                                <p className="text-[11px] text-gray-500 break-all" title={output}>
+                                    {output.substring(0, 80)}...
+                                </p>
+                            )}
                         </div>
                     )}
 

@@ -392,6 +392,12 @@ function WorkflowCanvasInner() {
     // Handle keyboard shortcuts
     const handleKeyDown = useCallback(
         (event: React.KeyboardEvent) => {
+            // Never intercept keyboard events when focus is inside an input/textarea
+            const target = event.target as HTMLElement;
+            if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) {
+                return;
+            }
+
             // Delete nodes or selected edge
             if (event.key === 'Delete' || event.key === 'Backspace') {
                 // Delete selected edge first
@@ -482,10 +488,11 @@ function WorkflowCanvasInner() {
                     animated: false,
                 }}
                 proOptions={{ hideAttribution: true }}
-                className={`bg-gray-950 ${activeTool === 'select'
+                className={`${activeTool === 'select'
                     ? '[&_.react-flow__pane]:!cursor-default'
                     : ''
                     }`}
+                style={{ backgroundColor: 'var(--canvas-bg)' }}
                 // Interaction props based on active tool
                 {...interactionProps}
                 // Always enabled regardless of tool
@@ -501,7 +508,7 @@ function WorkflowCanvasInner() {
                     variant={BackgroundVariant.Dots}
                     gap={20}
                     size={1}
-                    color="#374151"
+                    color="var(--canvas-dots)"
                 />
                 <MiniMap
                     nodeColor={(node) => {
@@ -515,8 +522,8 @@ function WorkflowCanvasInner() {
                             default: return '#6b7280';
                         }
                     }}
-                    className="bg-gray-800 border-gray-700"
-                    maskColor="rgba(0, 0, 0, 0.5)"
+                    style={{ backgroundColor: 'var(--surface-tertiary)' }}
+                    maskColor="var(--shadow-color)"
                 />
                 <Panel position="bottom-center">
                     <FloatingToolbar onRun={handleRun} isExecuting={isExecuting} />

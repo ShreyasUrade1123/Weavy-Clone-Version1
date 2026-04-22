@@ -9,8 +9,11 @@ import {
     Upload,
     Download,
     FileJson,
-    Loader2
+    Loader2,
+    Sun,
+    Moon
 } from 'lucide-react';
+import { useTheme } from 'next-themes';
 import { UserButton } from '@clerk/nextjs';
 import { useWorkflowStore } from '@/stores/workflow-store';
 import { useUIStore } from '@/stores/ui-store';
@@ -29,6 +32,11 @@ export function WorkflowHeader({ workflowId, onRun, onSave }: WorkflowHeaderProp
     const [isShareModalOpen, setIsShareModalOpen] = useState(false);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const { theme, setTheme } = useTheme();
+    const [mounted, setMounted] = useState(false);
+
+    // Avoid hydration mismatch — only render theme icon after mount
+    useEffect(() => setMounted(true), []);
 
     // Using store state
     const workflowName = useWorkflowStore((state) => state.workflowName);
@@ -116,7 +124,7 @@ export function WorkflowHeader({ workflowId, onRun, onSave }: WorkflowHeaderProp
         <>
             <header className="absolute top-0 left-0 right-0 h-auto p-4 flex items-start justify-between z-20 pointer-events-none">
                 {/* Left: Workflow Name */}
-                <div className="flex items-center pointer-events-auto bg-[#212126] border border-[#1C1C1E] rounded-lg p-1">
+                <div className="flex items-center pointer-events-auto header-card bg-[#212126] border border-[#1C1C1E] rounded-lg p-1">
                     <input
                         type="text"
                         value={workflowName}
@@ -136,7 +144,7 @@ export function WorkflowHeader({ workflowId, onRun, onSave }: WorkflowHeaderProp
                     />
 
                     {/* Floating Card for Actions */}
-                    <div className="bg-[#212126] border border-[#27272A] rounded-lg px-2 pt-2 pb-2 shadow-lg flex flex-col gap-3 min-w-[220px]">
+                    <div className="header-card bg-[#212126] border border-[#27272A] rounded-lg px-2 pt-2 pb-2 shadow-lg flex flex-col gap-3 min-w-[220px]">
                         {/* Row 1: Credits, Share, Save */}
                         <div className="flex items-center justify-between gap-2">
                             {/* Credits Badge */}
@@ -182,6 +190,22 @@ export function WorkflowHeader({ workflowId, onRun, onSave }: WorkflowHeaderProp
                             </button>
 
                             <div className="flex items-center gap-1">
+                                {/* Theme Toggle */}
+                                {mounted && (
+                                    <button
+                                        onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                                        className="p-1 text-gray-400 hover:text-white hover:bg-[#333336] rounded transition-colors"
+                                        title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+                                    >
+                                        {theme === 'dark' ? (
+                                            <Sun className="w-3.5 h-3.5" />
+                                        ) : (
+                                            <Moon className="w-3.5 h-3.5" />
+                                        )}
+                                    </button>
+                                )}
+
+                                <div className="w-px h-3.5 bg-[#3C3C3E] mx-0.5" />
                                 <button
                                     onClick={handleExport}
                                     className="p-1 text-gray-400 hover:text-white hover:bg-[#333336] rounded transition-colors"

@@ -191,7 +191,7 @@ export default function PropertiesSidebar() {
     };
 
     return (
-        <div className="fixed top-0 right-0 h-full w-[244px] bg-[#212126] border-l border-[#27272A] flex flex-col z-30 font-[family-name:var(--font-dm-sans)]">
+        <div className="properties-sidebar fixed top-0 right-0 h-full w-[244px] bg-[#212126] border-l border-[#27272A] flex flex-col z-30 font-[family-name:var(--font-dm-sans)]">
             {/* Header Overlay Replica */}
             <div className="px-3 pb-4 pt-7 flex flex-col gap-3 border-b border-[#27272A]/50 pb-6">
                 {/* Row 1: Credits, Save, Share */}

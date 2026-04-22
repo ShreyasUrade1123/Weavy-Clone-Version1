@@ -60,7 +60,7 @@ export function NodeContextMenu({
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
                 transition={{ duration: 0.1 }}
-                className="absolute z-50 w-84 bg-[#1C1C1E] border border-[#2B2B2F] rounded-sm shadow-2xl p-0.5 flex flex-col gap-0 nowheel nopan"
+                className="node-context-menu absolute z-50 w-84 bg-[#1C1C1E] border border-[#2B2B2F] rounded-sm shadow-2xl p-0.5 flex flex-col gap-0 nowheel nopan"
                 style={{
                     top: position.y,
                     left: position.x,

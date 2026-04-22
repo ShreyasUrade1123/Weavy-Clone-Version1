@@ -51,6 +51,9 @@ function ExtractFrameNodeComponent({ id, data, selected }: NodeProps) {
     const [currentFrame, setCurrentFrame] = useState(0);
     const [currentTimecode, setCurrentTimecode] = useState('00:00:00.00');
     const [isCaptured, setIsCaptured] = useState(false);
+    const isEditingInput = useRef(false);
+    const [editingFrame, setEditingFrame] = useState<string | null>(null);
+    const [editingTimestamp, setEditingTimestamp] = useState<string | null>(null);
 
     // Find connected source video
     const connectedEdge = edges.find(e => e.target === id && e.targetHandle === 'video_url');
@@ -65,25 +68,16 @@ function ExtractFrameNodeComponent({ id, data, selected }: NodeProps) {
         }
     }, [sourceVideoUrl, videoUrl, id, updateNodeData, isVideoConnected]);
 
-    // Auto-compute frame and timecode on timeupdate
-    const handleTimeUpdate = useCallback(() => {
-        const video = videoRef.current;
-        if (!video) return;
-        const time = video.currentTime;
-        const frame = Math.floor(time * DEFAULT_FPS);
-        setCurrentFrame(frame);
-        setCurrentTimecode(formatTimecode(time));
-    }, []);
-
-    // Capture frame on pause
-    const handlePause = useCallback(() => {
+    // Helper: capture the current video frame to canvas and update node data.
+    // Optional overrides let callers preserve exact user-specified values
+    // instead of recalculating from video.currentTime (which may differ due to keyframe snapping).
+    const captureCurrentFrame = useCallback((overrides?: { frame?: number; timestamp?: string; timecode?: string }) => {
         const video = videoRef.current;
         const canvas = canvasRef.current;
-        if (!video || !canvas) return;
+        if (!video || !canvas || video.readyState < 2) return;
 
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
-
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
@@ -91,33 +85,94 @@ function ExtractFrameNodeComponent({ id, data, selected }: NodeProps) {
         const frameDataUrl = canvas.toDataURL('image/png');
 
         const time = video.currentTime;
-        const frame = Math.floor(time * DEFAULT_FPS);
+        const f = overrides?.frame ?? Math.floor(time * DEFAULT_FPS);
+        const ts = overrides?.timestamp ?? String(time);
+        const tc = overrides?.timecode ?? formatTimecode(time);
 
         updateNodeData(id, {
             frameUrl: frameDataUrl,
-            frame: frame,
-            timecode: formatTimecode(time),
-            timestamp: String(time),
+            frame: f,
+            timecode: tc,
+            timestamp: ts,
             output: frameDataUrl,
         });
-
-        setCurrentFrame(frame);
-        setCurrentTimecode(formatTimecode(time));
+        setCurrentFrame(f);
+        setCurrentTimecode(tc);
         setIsCaptured(true);
     }, [id, updateNodeData]);
 
-    // Store video duration when metadata is loaded — needed by the execute route
-    // to convert percentage timestamps (e.g. '50%') into actual seconds
+    // Auto-compute frame and timecode on timeupdate
+    const handleTimeUpdate = useCallback(() => {
+        if (isEditingInput.current) return;
+        const video = videoRef.current;
+        if (!video) return;
+        const time = video.currentTime;
+        const f = Math.floor(time * DEFAULT_FPS);
+        setCurrentFrame(f);
+        setCurrentTimecode(formatTimecode(time));
+    }, []);
+
+    // Capture frame on pause
+    const handlePause = useCallback(() => {
+        if (isEditingInput.current) return;
+        captureCurrentFrame();
+    }, [captureCurrentFrame]);
+
+    // Store video duration when metadata is loaded
     const handleLoadedMetadata = useCallback(() => {
         const video = videoRef.current;
         if (!video || !isFinite(video.duration)) return;
         updateNodeData(id, { videoDuration: video.duration });
     }, [id, updateNodeData]);
 
-    // Handle timestamp manual input change
-    const handleTimestampChange = (value: string) => {
-        updateNodeData(id, { timestamp: value });
-    };
+    // Seek video to a specific time and capture the frame once seeked.
+    // Pass overrides so exact user values are preserved after the seek.
+    const seekAndCapture = useCallback((timeInSeconds: number, overrides?: { frame?: number; timestamp?: string; timecode?: string }) => {
+        const video = videoRef.current;
+        if (!video || !isFinite(video.duration)) return;
+        const clampedTime = Math.max(0, Math.min(timeInSeconds, video.duration));
+        video.currentTime = clampedTime;
+        const onSeeked = () => {
+            captureCurrentFrame(overrides);
+            isEditingInput.current = false;
+            video.removeEventListener('seeked', onSeeked);
+        };
+        video.addEventListener('seeked', onSeeked);
+    }, [captureCurrentFrame]);
+
+    // Handle timestamp — use local editing state so user can freely type/delete
+    const commitTimestamp = useCallback((value: string) => {
+        setEditingTimestamp(null);
+        isEditingInput.current = true;
+        const parsed = parseFloat(value);
+        if (!isNaN(parsed) && parsed >= 0) {
+            const f = Math.floor(parsed * DEFAULT_FPS);
+            const tc = formatTimecode(parsed);
+            setCurrentFrame(f);
+            setCurrentTimecode(tc);
+            updateNodeData(id, { timestamp: String(parsed), frame: f, timecode: tc });
+            seekAndCapture(parsed, { frame: f, timestamp: String(parsed), timecode: tc });
+        } else {
+            isEditingInput.current = false;
+        }
+    }, [id, updateNodeData, seekAndCapture]);
+
+    // Handle frame — use local editing state so user can freely type/delete
+    const commitFrame = useCallback((value: string) => {
+        setEditingFrame(null);
+        isEditingInput.current = true;
+        const f = parseInt(value, 10);
+        if (!isNaN(f) && f >= 0) {
+            const timeInSeconds = f / DEFAULT_FPS;
+            const tc = formatTimecode(timeInSeconds);
+            setCurrentFrame(f);
+            setCurrentTimecode(tc);
+            updateNodeData(id, { frame: f, timestamp: String(timeInSeconds), timecode: tc });
+            seekAndCapture(timeInSeconds, { frame: f, timestamp: String(timeInSeconds), timecode: tc });
+        } else {
+            isEditingInput.current = false;
+        }
+    }, [id, updateNodeData, seekAndCapture]);
 
     // Actions
     const handleDuplicate = () => setIsMenuOpen(false);
@@ -312,11 +367,20 @@ function ExtractFrameNodeComponent({ id, data, selected }: NodeProps) {
                         <span className="text-gray-300 text-[13px]">Timestamp</span>
                         <input
                             type="text"
-                            value={timestamp}
+                            value={editingTimestamp !== null ? editingTimestamp : timestamp}
                             onChange={(e) => {
                                 e.stopPropagation();
-                                handleTimestampChange(e.target.value);
+                                setEditingTimestamp(e.target.value);
                             }}
+                            onKeyDown={(e) => {
+                                e.stopPropagation();
+                                if (e.key === 'Enter') {
+                                    commitTimestamp((e.target as HTMLInputElement).value);
+                                    (e.target as HTMLInputElement).blur();
+                                }
+                            }}
+                            onBlur={(e) => commitTimestamp(e.target.value)}
+                            onFocus={(e) => { isEditingInput.current = true; setEditingTimestamp(e.target.value); }}
                             onClick={(e) => e.stopPropagation()}
                             placeholder='e.g. "50%" or "5.0"'
                             className="flex-1 bg-[#1C1C1E] border border-[#2C2C2E] rounded px-2 py-1.5 text-[13px] text-white focus:outline-none focus:border-[#3C3C3E] transition-colors"
@@ -325,15 +389,32 @@ function ExtractFrameNodeComponent({ id, data, selected }: NodeProps) {
 
                     {/* Bottom Bar Controls — Dynamic Frame & Timecode Display */}
                     <div className="mt-3 flex items-center gap-4 px-1">
-                        {/* Frame Display */}
+                        {/* Frame Input (editable) */}
                         <div className="flex items-center gap-3">
                             <span className="text-gray-300 text-[13px]">Frame</span>
-                            <span className="bg-[#1C1C1E] border border-[#2C2C2E] rounded px-2 py-1 min-w-[48px] text-[13px] text-white tabular-nums">
-                                {frame ?? currentFrame}
-                            </span>
+                            <input
+                                type="text"
+                                inputMode="numeric"
+                                value={editingFrame !== null ? editingFrame : String(frame ?? currentFrame)}
+                                onChange={(e) => {
+                                    e.stopPropagation();
+                                    setEditingFrame(e.target.value);
+                                }}
+                                onKeyDown={(e) => {
+                                    e.stopPropagation();
+                                    if (e.key === 'Enter') {
+                                        commitFrame((e.target as HTMLInputElement).value);
+                                        (e.target as HTMLInputElement).blur();
+                                    }
+                                }}
+                                onBlur={(e) => commitFrame(e.target.value)}
+                                onFocus={(e) => { isEditingInput.current = true; setEditingFrame(e.target.value); }}
+                                onClick={(e) => e.stopPropagation()}
+                                className="bg-[#1C1C1E] border border-[#2C2C2E] rounded px-2 py-1 min-w-[48px] w-[72px] text-[13px] text-white tabular-nums focus:outline-none focus:border-[#3C3C3E] transition-colors"
+                            />
                         </div>
 
-                        {/* Timecode Display */}
+                        {/* Timecode Display (read-only) */}
                         <div className="flex items-center gap-3">
                             <span className="text-gray-300 text-[13px]">Timecode</span>
                             <span className="bg-[#1C1C1E] border border-[#2C2C2E] rounded px-2 py-1 min-w-[80px] text-[13px] text-white tabular-nums">
@@ -358,9 +439,21 @@ function ExtractFrameNodeComponent({ id, data, selected }: NodeProps) {
                                     className="w-full h-auto max-h-[200px] object-contain"
                                 />
                             </div>
-                            <p className="text-[11px] text-gray-500 truncate" title={output}>
-                                {output.substring(0, 60)}...
-                            </p>
+                            {output.startsWith('http') ? (
+                                <a
+                                    href={output}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-[11px] text-[#60A5FA] hover:text-[#93C5FD] break-all underline underline-offset-2 block"
+                                    onClick={(e) => e.stopPropagation()}
+                                >
+                                    {output}
+                                </a>
+                            ) : (
+                                <p className="text-[11px] text-gray-500 break-all" title={output}>
+                                    {output.substring(0, 80)}...
+                                </p>
+                            )}
                         </div>
                     )}
 

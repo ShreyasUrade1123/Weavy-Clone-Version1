@@ -4,7 +4,10 @@ import React, { useState, useCallback, useEffect } from 'react';
 import {
     ChevronDown,
     Play,
-    Loader2
+    Loader2,
+    Minus,
+    Plus,
+    Maximize
 } from 'lucide-react';
 import { useReactFlow } from '@xyflow/react';
 import { useWorkflowStore } from '@/stores/workflow-store';
@@ -19,6 +22,7 @@ export default function FloatingToolbar({ onRun, isExecuting = false }: Floating
     const reactFlowInstance = useReactFlow();
     const [zoomLevel, setZoomLevel] = React.useState(100);
     const [showRunMenu, setShowRunMenu] = useState(false);
+    const [showZoomMenu, setShowZoomMenu] = useState(false);
 
     // Tool state from store
     const activeTool = useCanvasToolStore((state) => state.activeTool);
@@ -87,7 +91,7 @@ export default function FloatingToolbar({ onRun, isExecuting = false }: Floating
     }, [onRun]);
 
     return (
-        <div className="absolute bottom-[-4px] left-1/2 -translate-x-1/2 flex items-center gap-2 bg-[#212126] border border-[#2C2C2E] rounded-lg p-1.5 shadow-xl z-50">
+        <div className="floating-toolbar absolute bottom-[-4px] left-1/2 -translate-x-1/2 flex items-center gap-2 bg-[#212126] border border-[#2C2C2E] rounded-lg p-1.5 shadow-xl z-50">
             {/* Tool Selection */}
             <div className="flex bg-[#212126] rounded-md p-0.5">
                 <button
@@ -204,13 +208,66 @@ export default function FloatingToolbar({ onRun, isExecuting = false }: Floating
             <div className="w-px h-5.5 bg-[#C5C5C5]" />
 
             {/* Zoom Controls */}
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-0.5">
+                {/* Zoom Out */}
                 <button
-                    className="flex items-center gap-2 px-2 py-1.5 text-xs text-gray-200 hover:text-white rounded hover:bg-[#2C2C2E] transition-colors min-w-[60px] justify-center"
-                    onClick={() => reactFlowInstance.zoomIn()}
+                    className="px-[5px] py-[4px] text-gray-400 hover:text-white rounded-sm hover:bg-[#2C2C2E] transition-colors"
+                    onClick={() => reactFlowInstance.zoomOut({ duration: 200 })}
+                    title="Zoom Out"
                 >
-                    {zoomLevel}%
-                    <ChevronDown className="w-3 h-3 text-gray-500" />
+                    <Minus className="w-4 h-4" strokeWidth={1.5} />
+                </button>
+
+                {/* Zoom Level with Presets Dropdown */}
+                <div className="relative">
+                    <button
+                        className="flex items-center gap-1.5 px-2 py-1.5 text-xs text-gray-200 hover:text-white rounded-sm hover:bg-[#2C2C2E] transition-colors min-w-[56px] justify-center"
+                        onClick={() => setShowZoomMenu(!showZoomMenu)}
+                        title="Zoom presets"
+                    >
+                        {zoomLevel}%
+                        <ChevronDown className="w-3 h-3 text-gray-500" />
+                    </button>
+
+                    {showZoomMenu && (
+                        <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-[#1C1C1E] border border-[#2C2C2E] rounded-lg shadow-xl overflow-hidden min-w-[100px] z-50">
+                            {[50, 75, 100, 150, 200].map((preset) => (
+                                <button
+                                    key={preset}
+                                    onClick={() => {
+                                        reactFlowInstance.zoomTo(preset / 100, { duration: 200 });
+                                        setShowZoomMenu(false);
+                                    }}
+                                    className={`w-full px-3 py-2 text-left text-xs transition-colors ${zoomLevel === preset
+                                        ? 'text-[#E1E476] bg-[#2A2A2D]'
+                                        : 'text-white hover:bg-[#2C2C2E]'
+                                        }`}
+                                >
+                                    {preset}%
+                                </button>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
+                {/* Zoom In */}
+                <button
+                    className="px-[5px] py-[4px] text-gray-400 hover:text-white rounded-sm hover:bg-[#2C2C2E] transition-colors"
+                    onClick={() => reactFlowInstance.zoomIn({ duration: 200 })}
+                    title="Zoom In"
+                >
+                    <Plus className="w-4 h-4" strokeWidth={1.5} />
+                </button>
+
+                <div className="w-px h-5.5 bg-[#C5C5C5] mx-1" />
+
+                {/* Fit View */}
+                <button
+                    className="px-[5px] py-[4px] text-gray-400 hover:text-white rounded-sm hover:bg-[#2C2C2E] transition-colors"
+                    onClick={() => reactFlowInstance.fitView({ padding: 0.2, duration: 300 })}
+                    title="Fit to View"
+                >
+                    <Maximize className="w-4 h-4" strokeWidth={1.5} />
                 </button>
             </div>
         </div>

@@ -39,13 +39,20 @@ interface HistorySidebarProps {
     onClose: () => void;
 }
 
+// Node types whose output is a URL that should never be truncated
+const IMAGE_NODE_TYPES = ['cropImage', 'extractFrame', 'uploadImage', 'crop_image', 'extract_frame', 'upload_image'];
+
 // Helper to extract a display-friendly output string
 function formatNodeOutput(output: unknown, nodeType: string): string | null {
     if (!output) return null;
 
+    const isImageNode = IMAGE_NODE_TYPES.includes(nodeType);
+
     // If it's a simple string (URL or text)
     if (typeof output === 'string') {
-        if (output.length > 120) return output.substring(0, 120) + '...';
+        // Never truncate URLs for image-producing nodes
+        if (isImageNode) return output;
+        if (output.length > 200) return output.substring(0, 200) + '...';
         return output;
     }
 
@@ -53,14 +60,14 @@ function formatNodeOutput(output: unknown, nodeType: string): string | null {
     if (typeof output === 'object' && output !== null) {
         const obj = output as Record<string, unknown>;
         if (obj.value && typeof obj.value === 'string') {
-            const val = obj.value;
-            if (val.length > 120) return val.substring(0, 120) + '...';
-            return val;
+            if (isImageNode) return obj.value;
+            if (obj.value.length > 200) return obj.value.substring(0, 200) + '...';
+            return obj.value;
         }
         // For image nodes, check for imageUrl or url
         if (obj.imageUrl && typeof obj.imageUrl === 'string') return obj.imageUrl;
         if (obj.frameUrl && typeof obj.frameUrl === 'string') return obj.frameUrl;
-        return JSON.stringify(output).substring(0, 100) + '...';
+        return JSON.stringify(output).substring(0, 150) + '...';
     }
 
     return String(output);
@@ -194,7 +201,7 @@ export function HistorySidebar({ workflowId, isOpen, onClose }: HistorySidebarPr
     if (!isOpen) return null;
 
     return (
-        <div className="w-[380px] bg-[#1E1E21] border border-[#2C2C2E] rounded-lg flex flex-col max-h-[600px] shadow-2xl overflow-hidden pointer-events-auto" style={{ fontFamily: 'var(--font-dm-sans)', fontSize: '9pt', fontWeight: 400 }}>
+        <div className="history-sidebar w-[380px] bg-[#1E1E21] border border-[#2C2C2E] rounded-lg flex flex-col max-h-[600px] shadow-2xl overflow-hidden pointer-events-auto" style={{ fontFamily: 'var(--font-dm-sans)', fontSize: '9pt', fontWeight: 400 }}>
             {/* Header */}
             <div className="flex items-center justify-between p-5 px-5 pb-2.5 border-b border-[#2A2A2D]">
                 <h2 className="text-[12px] font-normal text-[#E5E5E5] tracking-wide" style={{ fontFamily: 'var(--font-dm-mono)' }}>Task manager</h2>
@@ -331,10 +338,22 @@ export function HistorySidebar({ workflowId, isOpen, onClose }: HistorySidebarPr
                                                                     />
                                                                 </div>
                                                             )}
-                                                            {/* Text output */}
-                                                            <p className="text-[11px] text-[#6B7280] leading-relaxed break-all">
-                                                                {outputText}
-                                                            </p>
+                                                            {/* Text/URL output */}
+                                                            {outputText.startsWith('http') ? (
+                                                                <a
+                                                                    href={outputText}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="text-[11px] text-[#60A5FA] hover:text-[#93C5FD] leading-relaxed break-all underline underline-offset-2 block"
+                                                                    onClick={(e) => e.stopPropagation()}
+                                                                >
+                                                                    {outputText}
+                                                                </a>
+                                                            ) : (
+                                                                <p className="text-[11px] text-[#6B7280] leading-relaxed break-all">
+                                                                    {outputText}
+                                                                </p>
+                                                            )}
                                                         </div>
                                                     )}
 

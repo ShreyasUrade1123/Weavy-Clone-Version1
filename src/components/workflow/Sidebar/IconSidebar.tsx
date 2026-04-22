@@ -33,7 +33,7 @@ export default function IconSidebar({ activeSection, onSectionClick }: IconSideb
     ];
 
     return (
-        <div className="w-[57px] bg-[#212126] flex flex-col items-center py-[18px] z-50">
+        <div className="icon-sidebar w-[57px] bg-[#212126] flex flex-col items-center py-[18px] z-50">
             {/* Logo Menu */}
             <div className="mb-[33px]">
                 <LogoMenu />

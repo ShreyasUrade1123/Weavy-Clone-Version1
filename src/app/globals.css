@@ -1,21 +1,57 @@
 @import "tailwindcss";
 
+/* Light mode (default) */
 :root {
+  --background: #f8f9fa;
+  --foreground: #1a1a2e;
+  --surface: #ffffff;
+  --surface-secondary: #f0f1f3;
+  --surface-tertiary: #e8e9eb;
+  --border: #d1d5db;
+  --border-secondary: #e5e7eb;
+  --text-primary: #1a1a2e;
+  --text-secondary: #4b5563;
+  --text-tertiary: #9ca3af;
+  --accent: #E1E476;
+  --accent-hover: #d4d765;
+  --canvas-bg: #e8eaed;
+  --canvas-dots: #b0b5be;
+  --hover-bg: #e8e9eb;
+  --shadow-color: rgba(0, 0, 0, 0.08);
+}
+
+/* Dark mode */
+.dark {
   --background: #030712;
   --foreground: #f9fafb;
+  --surface: #212126;
+  --surface-secondary: #1C1C1E;
+  --surface-tertiary: #2B2B2F;
+  --border: #2C2C2E;
+  --border-secondary: #27272A;
+  --text-primary: #f9fafb;
+  --text-secondary: #9ca3af;
+  --text-tertiary: #6b7280;
+  --accent: #E1E476;
+  --accent-hover: #d4d765;
+  --canvas-bg: #0E0E13;
+  --canvas-dots: #374151;
+  --hover-bg: #2C2C2E;
+  --shadow-color: rgba(0, 0, 0, 0.4);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .font-dm-regular {
   font-family: var(--font-dm-regular), sans-serif;
 }
 
-/* React Flow custom styles */
+/* ─── React Flow Base Styles ─────────────────────────────────── */
 .react-flow__node {
   border-radius: 0.75rem;
 }
@@ -31,20 +67,351 @@ body {
 }
 
 .react-flow__minimap {
-  background-color: #1f2937;
+  background-color: var(--surface-tertiary) !important;
   border-radius: 0.5rem;
+}
+
+/* ─── Light Mode: Node & UI Overrides ────────────────────────── */
+
+/* Node container backgrounds */
+html:not(.dark) .react-flow__node > .group {
+  background-color: #ffffff !important;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.07), 0 0 1px rgba(0,0,0,0.12) !important;
+}
+
+/* Selected node background */
+html:not(.dark) .react-flow__node.selected > .group {
+  background-color: #f5f5f7 !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1), 0 0 0 2px #d1d5db !important;
+}
+
+/* Handle circles inside nodes (the outer wrapper) */
+html:not(.dark) .react-flow__node > .group > div > div > div.bg-\[\#2B2B2F\],
+html:not(.dark) .react-flow__node > .group > div > div > div.bg-\[\#212126\] {
+  background-color: #ffffff !important;
+}
+
+/* Inputs inside nodes */
+html:not(.dark) .react-flow__node input,
+html:not(.dark) .react-flow__node textarea,
+html:not(.dark) .react-flow__node select {
+  background-color: #f0f1f3 !important;
+  border-color: #d1d5db !important;
+  color: #1a1a2e !important;
+}
+
+html:not(.dark) .react-flow__node input::placeholder,
+html:not(.dark) .react-flow__node textarea::placeholder {
+  color: #9ca3af !important;
+}
+
+/* LLM node text area and response area (bg-[#353539]) */
+html:not(.dark) .react-flow__node .bg-\[\#353539\] {
+  background-color: #f0f1f3 !important;
+  border: 1px solid #d1d5db !important;
+  color: #1a1a2e !important;
+}
+
+/* LLM Run Model button */
+html:not(.dark) .react-flow__node .bg-\[\#212126\].border-white\/30 {
+  background-color: #f0f1f3 !important;
+  border-color: #d1d5db !important;
+  color: #374151 !important;
+}
+
+html:not(.dark) .react-flow__node .bg-\[\#212126\].border-white\/30:hover {
+  background-color: #e8e9eb !important;
+}
+
+/* Node internal panels & sections */
+html:not(.dark) .react-flow__node .bg-\[\#1C1C1E\] {
+  background-color: #f0f1f3 !important;
+}
+
+html:not(.dark) .react-flow__node .bg-\[\#1A1A1D\] {
+  background-color: #f0f1f3 !important;
+}
+
+html:not(.dark) .react-flow__node .border-\[\#2C2C2E\] {
+  border-color: #d1d5db !important;
+}
+
+/* Node text overrides */
+html:not(.dark) .react-flow__node .text-gray-200 {
+  color: #1a1a2e !important;
+}
+
+html:not(.dark) .react-flow__node .text-gray-300 {
+  color: #374151 !important;
+}
+
+html:not(.dark) .react-flow__node .text-gray-400 {
+  color: #6b7280 !important;
+}
+
+html:not(.dark) .react-flow__node .text-gray-500 {
+  color: #9ca3af !important;
+}
+
+html:not(.dark) .react-flow__node .text-gray-600 {
+  color: #9ca3af !important;
+}
+
+html:not(.dark) .react-flow__node .text-white {
+  color: #1a1a2e !important;
+}
+
+/* Node video player background */
+html:not(.dark) .react-flow__node video {
+  background-color: #e8e9eb !important;
+}
+
+/* Dropdown menus inside nodes (aspect ratio, context menu, etc.) */
+html:not(.dark) .react-flow__node .bg-\[\#1C1C1E\].border-\[\#2C2C2E\] {
+  background-color: #ffffff !important;
+  border-color: #d1d5db !important;
+}
+
+/* ─── Light Mode: Floating Toolbar ───────────────────────────── */
+html:not(.dark) .floating-toolbar {
+  background-color: #ffffff !important;
+  border-color: #d1d5db !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08) !important;
+}
+
+html:not(.dark) .floating-toolbar .text-gray-400 {
+  color: #6b7280 !important;
+}
+
+html:not(.dark) .floating-toolbar .text-gray-200 {
+  color: #374151 !important;
+}
+
+html:not(.dark) .floating-toolbar .text-gray-500 {
+  color: #9ca3af !important;
+}
+
+html:not(.dark) .floating-toolbar button:hover {
+  background-color: #e8e9eb !important;
+}
+
+/* Toolbar inner container backgrounds */
+html:not(.dark) .floating-toolbar .bg-\[\#212126\] {
+  background-color: #ffffff !important;
+}
+
+/* Toolbar dividers */
+html:not(.dark) .floating-toolbar .bg-\[\#C5C5C5\] {
+  background-color: #d1d5db !important;
+}
+
+html:not(.dark) .floating-toolbar .bg-\[\#3C3C3E\] {
+  background-color: #d1d5db !important;
+}
+
+/* Toolbar dropdown menus (zoom presets, run menu) */
+html:not(.dark) .floating-toolbar .bg-\[\#1C1C1E\] {
+  background-color: #ffffff !important;
+  border-color: #d1d5db !important;
+}
+
+html:not(.dark) .floating-toolbar .bg-\[\#1C1C1E\] button {
+  color: #1a1a2e !important;
+}
+
+html:not(.dark) .floating-toolbar .bg-\[\#1C1C1E\] button:hover {
+  background-color: #f0f1f3 !important;
+}
+
+/* Kbd tag in run menu */
+html:not(.dark) .floating-toolbar .bg-\[\#0E0E10\] {
+  background-color: #e8e9eb !important;
+}
+
+/* Node context menu (appears over nodes) */
+html:not(.dark) .node-context-menu,
+html:not(.dark) .context-menu {
+  background-color: #ffffff !important;
+  border-color: #d1d5db !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
+}
+
+html:not(.dark) .node-context-menu {
+  background-color: #ffffff !important;
+  border-color: #d1d5db !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
+}
+
+html:not(.dark) .node-context-menu button.text-gray-300 {
+  color: #374151 !important;
+}
+
+html:not(.dark) .node-context-menu button.text-gray-300:hover {
+  background-color: #f0f1f3 !important;
+  color: #1a1a2e !important;
+}
+
+html:not(.dark) .node-context-menu .bg-\[\#2B2B2F\] {
+  background-color: #e5e7eb !important;
+}
+
+html:not(.dark) .node-context-menu .text-gray-500 {
+  color: #9ca3af !important;
+}
+
+/* ─── Light Mode: Header Card ────────────────────────────────── */
+html:not(.dark) .header-card {
+  background-color: #ffffff !important;
+  border-color: #d1d5db !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08) !important;
+}
+
+html:not(.dark) .header-card input {
+  color: #1a1a2e !important;
+}
+
+html:not(.dark) .header-card input:hover {
+  background-color: #f0f1f3 !important;
+}
+
+html:not(.dark) .header-card .text-gray-400 {
+  color: #6b7280 !important;
+}
+
+html:not(.dark) .header-card .text-gray-200 {
+  color: #374151 !important;
+}
+
+/* ─── Light Mode: History Sidebar ────────────────────────────── */
+html:not(.dark) .history-sidebar {
+  background-color: #ffffff !important;
+  border-color: #d1d5db !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
+}
+
+html:not(.dark) .history-sidebar .text-gray-400 {
+  color: #6b7280 !important;
+}
+
+html:not(.dark) .history-sidebar .text-\[\#E5E5E5\] {
+  color: #1a1a2e !important;
+}
+
+html:not(.dark) .history-sidebar .text-\[\#A0A0A0\] {
+  color: #4b5563 !important;
+}
+
+html:not(.dark) .history-sidebar .text-\[\#6B7280\] {
+  color: #9ca3af !important;
+}
+
+html:not(.dark) .history-sidebar .border-\[\#2A2A2D\] {
+  border-color: #e5e7eb !important;
+}
+
+html:not(.dark) .history-sidebar .hover\:bg-\[\#2A2A2D\]:hover {
+  background-color: #f0f1f3 !important;
+}
+
+/* ─── Light Mode: Context Menus / Dropdowns ──────────────────── */
+html:not(.dark) .bg-\[\#0E0E10\] {
+  background-color: #e8e9eb !important;
+}
+
+/* ─── Light Mode: Selection Box ──────────────────────────────── */
+html:not(.dark) .react-flow__selection {
+  background-color: rgba(59, 130, 246, 0.08) !important;
+  border-color: rgba(59, 130, 246, 0.4) !important;
+}
+
+/* ─── Light Mode: Properties Sidebar ─────────────────────────── */
+html:not(.dark) .properties-sidebar {
+  background-color: #ffffff !important;
+  border-color: #d1d5db !important;
+}
+
+html:not(.dark) .properties-sidebar .border-\[\#27272A\] {
+  border-color: #e5e7eb !important;
+}
+
+html:not(.dark) .properties-sidebar .border-\[\#27272A\]\/50 {
+  border-color: rgba(229, 231, 235, 0.5) !important;
+}
+
+html:not(.dark) .properties-sidebar .bg-\[\#3C3C40\] {
+  background-color: #e5e7eb !important;
+}
+
+/* Text colors */
+html:not(.dark) .properties-sidebar .text-white {
+  color: #1a1a2e !important;
+}
+
+html:not(.dark) .properties-sidebar .text-gray-200 {
+  color: #374151 !important;
+}
+
+html:not(.dark) .properties-sidebar .text-gray-300 {
+  color: #4b5563 !important;
+}
+
+html:not(.dark) .properties-sidebar .text-gray-400 {
+  color: #6b7280 !important;
+}
+
+html:not(.dark) .properties-sidebar .text-gray-500 {
+  color: #9ca3af !important;
+}
+
+html:not(.dark) .properties-sidebar .text-gray-600 {
+  color: #9ca3af !important;
+}
+
+/* Inputs, selects, and form controls */
+html:not(.dark) .properties-sidebar .bg-\[\#18181B\] {
+  background-color: #f0f1f3 !important;
+  border-color: #d1d5db !important;
+  color: #1a1a2e !important;
+}
+
+html:not(.dark) .properties-sidebar select {
+  background-color: #f0f1f3 !important;
+  border-color: #d1d5db !important;
+  color: #1a1a2e !important;
+}
+
+/* Temperature slider track */
+html:not(.dark) .properties-sidebar .bg-\[\#27272A\].rounded-full {
+  background-color: #d1d5db !important;
+}
+
+/* Runs counter container */
+html:not(.dark) .properties-sidebar .bg-\[\#212126\].border-gray-600 {
+  background-color: #f0f1f3 !important;
+  border-color: #d1d5db !important;
+}
+
+/* Footer background */
+html:not(.dark) .properties-sidebar .bg-\[\#212126\] {
+  background-color: #ffffff !important;
+}
+
+/* Hover states */
+html:not(.dark) .properties-sidebar .hover\:bg-\[\#333336\]:hover {
+  background-color: #f0f1f3 !important;
+}
+
+html:not(.dark) .properties-sidebar button.text-gray-400:hover {
+  color: #1a1a2e !important;
 }
 
 /* Pulsating glow animation for running nodes */
 @keyframes pulse-glow {
-
-  0%,
-  100% {
+  0%, 100% {
     box-shadow: 0 0 5px rgba(168, 85, 247, 0.5),
       0 0 10px rgba(168, 85, 247, 0.3),
       0 0 15px rgba(168, 85, 247, 0.2);
   }
-
   50% {
     box-shadow: 0 0 10px rgba(168, 85, 247, 0.8),
       0 0 20px rgba(168, 85, 247, 0.5),
@@ -63,23 +430,23 @@ body {
   }
 }
 
-/* Custom scrollbar */
+/* Custom scrollbar — theme-aware */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #1f2937;
+  background: var(--surface-secondary);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #4b5563;
+  background: var(--text-tertiary);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #6b7280;
+  background: var(--text-secondary);
 }
 
 /* Hide scrollbar utility */
