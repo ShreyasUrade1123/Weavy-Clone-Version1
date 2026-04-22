@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { UserButton, useUser, useClerk } from '@clerk/nextjs';
+import { useTheme } from 'next-themes';
 import {
     Plus,
     Folder,
@@ -16,7 +17,9 @@ import {
     Grid3X3,
     Sparkles,
     Settings,
-    LogOut
+    LogOut,
+    Sun,
+    Moon
 } from 'lucide-react';
 import { PRODUCT_MARKETING_KIT } from '@/lib/sample-workflows';
 
@@ -53,6 +56,7 @@ export default function DashboardPage() {
     const router = useRouter();
     const { user } = useUser();
     const { signOut, openUserProfile } = useClerk();
+    const { theme, setTheme } = useTheme();
     const [workflows, setWorkflows] = useState<Workflow[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isCreating, setIsCreating] = useState(false);
@@ -281,9 +285,9 @@ export default function DashboardPage() {
     );
 
     return (
-        <div className="min-h-screen bg-[#0E0E13] flex font-[family-name:var(--font-dm-sans)] text-xs text-gray-200 relative">
+        <div className="dashboard-page min-h-screen bg-[#0E0E13] flex font-[family-name:var(--font-dm-sans)] text-xs text-gray-200 relative">
             {/* Left Sidebar */}
-            <aside className="w-[240px] sticky top-0 h-screen shrink-0 bg-[#0E0E13] border-r border-gray-800 flex flex-col justify-between py-4">
+            <aside className="dashboard-sidebar w-[240px] sticky top-0 h-screen shrink-0 bg-[#0E0E13] border-r border-gray-800 flex flex-col justify-between py-4">
                 <div>
                     {/* User Profile Dropdown */}
                     <div className="relative px-4 mb-8" ref={userMenuRef}>
@@ -306,7 +310,7 @@ export default function DashboardPage() {
                         </button>
 
                         {isUserMenuOpen && (
-                            <div className="absolute left-4 top-full mt-2 w-[280px] bg-[#212126] border border-[#2C2C2E] rounded-xl shadow-2xl z-50 py-4 font-[family-name:var(--font-dm-sans)] text-white select-none">
+                            <div className="dashboard-user-menu absolute left-4 top-full mt-2 w-[280px] bg-[#212126] border border-[#2C2C2E] rounded-xl shadow-2xl z-50 py-4 font-[family-name:var(--font-dm-sans)] text-white select-none">
                                 {/* Header */}
                                 <div className="px-4 flex items-center gap-3 mb-6">
                                     {user?.imageUrl ? (
@@ -434,20 +438,29 @@ export default function DashboardPage() {
             </aside>
 
             {/* Main Content */}
-            <main className="flex-1 px-17 py-9">
+            <main className="dashboard-main flex-1 px-17 py-9">
                 {/* Header */}
                 <div className="flex items-center justify-between mb-9">
-                    <h1 className="text-[14px] font-regular text-white select-none">
+                    <h1 className="text-[14px] font-regular text-white dark:text-white select-none">
                         {user?.firstName || user?.username || 'User'}&apos;s Workspace
                     </h1>
-                    <button
-                        onClick={handleCreateNew}
-                        disabled={isCreating}
-                        className="flex items-center justify-center gap-1 px-3.5 py-1.75 bg-[#F7FFA8] hover:bg-[#FAFFC7] disabled:opacity-50 text-black text-[14px] font-regular rounded transition-colors select-none"
-                    >
-                        <Plus className="w-4.5 h-4.5" />
-                        {isCreating ? 'Creating...' : 'Create New File'}
-                    </button>
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                            className="p-1.5 rounded-md border border-[#333] dark:border-[#333] hover:bg-[#2C2C2E] dark:hover:bg-[#2C2C2E] transition-colors select-none"
+                            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                        >
+                            {theme === 'dark' ? <Sun className="w-4 h-4 text-gray-400" /> : <Moon className="w-4 h-4 text-gray-500" />}
+                        </button>
+                        <button
+                            onClick={handleCreateNew}
+                            disabled={isCreating}
+                            className="flex items-center justify-center gap-1 px-3.5 py-1.75 bg-[#F7FFA8] hover:bg-[#FAFFC7] disabled:opacity-50 text-black text-[14px] font-regular rounded transition-colors select-none"
+                        >
+                            <Plus className="w-4.5 h-4.5" />
+                            {isCreating ? 'Creating...' : 'Create New File'}
+                        </button>
+                    </div>
                 </div>
 
                 {/* Workflow Library Section */}
@@ -654,7 +667,7 @@ export default function DashboardPage() {
             {contextMenu && (
                 <div
                     ref={contextMenuRef}
-                    className="fixed z-50 min-w-[200px] bg-[#2A2A2E] border border-[#3A3A3E] rounded-lg shadow-2xl shadow-black/50 py-2 select-none"
+                    className="dashboard-context-menu fixed z-50 min-w-[200px] bg-[#2A2A2E] border border-[#3A3A3E] rounded-lg shadow-2xl shadow-black/50 py-2 select-none"
                     style={{ left: contextMenu.x, top: contextMenu.y }}
                 >
                     <button

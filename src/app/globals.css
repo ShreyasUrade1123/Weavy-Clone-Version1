@@ -405,6 +405,202 @@ html:not(.dark) .properties-sidebar button.text-gray-400:hover {
   color: #1a1a2e !important;
 }
 
+/* ─── Light Mode: Dashboard ─────────────────────────────────── */
+html:not(.dark) .dashboard-page {
+  background-color: #f5f5f7 !important;
+  color: #1a1a2e !important;
+}
+
+/* Left Sidebar */
+html:not(.dark) .dashboard-sidebar {
+  background-color: #ffffff !important;
+  border-color: #e5e7eb !important;
+}
+
+html:not(.dark) .dashboard-sidebar .text-gray-300,
+html:not(.dark) .dashboard-sidebar .text-white {
+  color: #1a1a2e !important;
+}
+
+html:not(.dark) .dashboard-sidebar .text-\[\#666\] {
+  color: #6b7280 !important;
+}
+
+html:not(.dark) .dashboard-sidebar .bg-\[\#212126\] {
+  background-color: #f0f1f3 !important;
+}
+
+html:not(.dark) .dashboard-sidebar .hover\:bg-\[\#1C1C1E\]\/50:hover {
+  background-color: #f0f1f3 !important;
+}
+
+html:not(.dark) .dashboard-sidebar .text-gray-400 {
+  color: #9ca3af !important;
+}
+
+/* User dropdown */
+html:not(.dark) .dashboard-user-menu {
+  background-color: #ffffff !important;
+  border-color: #e5e7eb !important;
+  color: #1a1a2e !important;
+}
+
+html:not(.dark) .dashboard-user-menu .text-white {
+  color: #1a1a2e !important;
+}
+
+html:not(.dark) .dashboard-user-menu .text-gray-400 {
+  color: #6b7280 !important;
+}
+
+html:not(.dark) .dashboard-user-menu .text-gray-200 {
+  color: #374151 !important;
+}
+
+html:not(.dark) .dashboard-user-menu .text-gray-300 {
+  color: #4b5563 !important;
+}
+
+html:not(.dark) .dashboard-user-menu .bg-\[\#2C2C2E\] {
+  background-color: #e5e7eb !important;
+}
+
+html:not(.dark) .dashboard-user-menu .hover\:bg-\[\#2C2C2E\]\/50:hover {
+  background-color: #f0f1f3 !important;
+}
+
+/* Main content text */
+html:not(.dark) .dashboard-main .text-white {
+  color: #1a1a2e !important;
+}
+
+html:not(.dark) .dashboard-main .text-gray-200 {
+  color: #374151 !important;
+}
+
+html:not(.dark) .dashboard-main .text-gray-400 {
+  color: #6b7280 !important;
+}
+
+html:not(.dark) .dashboard-main .text-gray-500 {
+  color: #9ca3af !important;
+}
+
+html:not(.dark) .dashboard-main .text-gray-600 {
+  color: #9ca3af !important;
+}
+
+html:not(.dark) .dashboard-main .text-\[\#A8A8AA\] {
+  color: #6b7280 !important;
+}
+
+html:not(.dark) .dashboard-main .text-\[\#6B6B6B\] {
+  color: #6b7280 !important;
+}
+
+/* Theme toggle button */
+html:not(.dark) .dashboard-main .border-\[\#333\] {
+  border-color: #d1d5db !important;
+}
+
+html:not(.dark) .dashboard-main .hover\:bg-\[\#2C2C2E\]:hover {
+  background-color: #e5e7eb !important;
+}
+
+/* Workflow library section */
+html:not(.dark) .dashboard-main .bg-\[\#212126\] {
+  background-color: #ffffff !important;
+  border-color: #e5e7eb !important;
+}
+
+html:not(.dark) .dashboard-main .border-\[\#1C1C1E\] {
+  border-color: #e5e7eb !important;
+}
+
+html:not(.dark) .dashboard-main .bg-\[\#353539\] {
+  background-color: #e5e7eb !important;
+}
+
+html:not(.dark) .dashboard-main .bg-\[\#2C2C2E\] {
+  background-color: #e5e7eb !important;
+}
+
+/* Workflow cards */
+html:not(.dark) .dashboard-main .bg-\[\#212126\].border {
+  background-color: #ffffff !important;
+}
+
+html:not(.dark) .dashboard-main .border-\[\#323237\] {
+  border-color: #e5e7eb !important;
+}
+
+html:not(.dark) .dashboard-main .group-hover\:bg-\[\#424247\] {
+  background-color: #f0f1f3 !important;
+}
+
+html:not(.dark) .dashboard-main .hover\:bg-\[\#1C1C1E\]:hover {
+  background-color: #f0f1f3 !important;
+}
+
+/* Search */
+html:not(.dark) .dashboard-main input {
+  background-color: #ffffff !important;
+  border-color: #d1d5db !important;
+  color: #1a1a2e !important;
+}
+
+html:not(.dark) .dashboard-main input::placeholder {
+  color: #9ca3af !important;
+}
+
+/* Empty state */
+html:not(.dark) .dashboard-main svg {
+  stroke: #6b7280;
+}
+
+html:not(.dark) .dashboard-main .border-\[\#333\] {
+  border-color: #d1d5db !important;
+}
+
+html:not(.dark) .dashboard-main .hover\:border-\[\#555\]:hover {
+  border-color: #9ca3af !important;
+}
+
+/* Rename input */
+html:not(.dark) .dashboard-main .bg-\[\#2C2C2E\].border {
+  background-color: #f0f1f3 !important;
+  border-color: #d1d5db !important;
+  color: #1a1a2e !important;
+}
+
+/* Context menu */
+html:not(.dark) .dashboard-context-menu {
+  background-color: #ffffff !important;
+  border-color: #e5e7eb !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1) !important;
+}
+
+html:not(.dark) .dashboard-context-menu .text-gray-200 {
+  color: #374151 !important;
+}
+
+html:not(.dark) .dashboard-context-menu .text-red-400 {
+  color: #ef4444 !important;
+}
+
+html:not(.dark) .dashboard-context-menu .hover\:bg-\[\#3A3A3E\]:hover {
+  background-color: #f0f1f3 !important;
+}
+
+html:not(.dark) .dashboard-context-menu .border-\[\#3A3A3E\] {
+  border-color: #e5e7eb !important;
+}
+
+/* Discord link */
+html:not(.dark) .dashboard-sidebar .text-gray-400.hover\:text-white:hover {
+  color: #1a1a2e !important;
+}
+
 /* Pulsating glow animation for running nodes */
 @keyframes pulse-glow {
   0%, 100% {
